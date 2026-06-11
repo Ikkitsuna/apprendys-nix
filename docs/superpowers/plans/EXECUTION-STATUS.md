@@ -23,6 +23,32 @@
 
 - **Build ISO finale** (intègre OTA + durcissement) en arrière-plan : PID 11001, log `/tmp/apprendys-iso-final.log`. C'est CETTE ISO qu'on flashe pour le test/prod.
 
+## VALIDATION NUIT 11→12 juin — mécanisme d'install + boot PROUVÉ (sans GUI)
+
+Script `/tmp/apprendys-install-validate.sh` : reproduit do_install() sur image fichier
+(loop device, garde-fou /dev/loop only), PUIS boot direct kernel en QEMU.
+
+**Résultats — tout vert sauf artefacts host (pas des bugs Apprendys) :**
+- ✅ Partitionnement GPT + labels APPR-EFI / APPRENDYS : parfait
+- ✅ mkfs.fat / mkfs.ext4 : OK
+- ✅ `nixos-install --system` OFFLINE : closure complète copiée (tts, stt, session-init,
+  libreoffice, piper, sddm, toplevel) → système installable 100 % sans réseau, prouvé
+- ✅ **BOOT jusqu'au bureau enfant** : kernel 6.18 → initrd (disque SATA via ahci/sd_mod) →
+  systemd → SDDM autologin → XFCE → session-init pose les 3 icônes + fond nuages.
+  Preuve : `docs/superpowers/plans/apprendys-installed-boot-proof.png`
+- ✅ mount/util-linux présents dans le système installé (vérifié)
+
+**Artefacts host (NON bugs — n'arrivent PAS sur la vraie ISO NixOS) :**
+- L'install bootloader via `nixos-install`/`nixos-enter` depuis Arch échoue (PATH chroot,
+  « mount: commande introuvable ») → contourné par boot direct kernel QEMU. Sur la vraie
+  ISO l'environnement est complet, ça marche.
+- QEMU de nixpkgs cassé sur ce host (SDL3 abort) → utiliser `/usr/bin/qemu-system-x86_64`.
+- Ne JAMAIS mettre l'image scratch dans /tmp (tmpfs RAM 16G) ni sous /home/florent
+  (perms 701, nix-daemon ne traverse pas) → utiliser /var/tmp (disque réel).
+
+→ **Conclusion : le cœur de Task 10 est validé.** Le test GUI de Florent ne reste à faire
+  que pour le câblage des 3 dialogues zenity (risque faible).
+
 ## RESTE À FAIRE — nécessite Florent (gates humaines)
 
 1. **Task 10 — test bout-en-bout VM** (les 3 clics = Florent dans virt-viewer) :
