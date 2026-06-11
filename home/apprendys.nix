@@ -499,8 +499,7 @@ XMLEOF
     '';
   };
 
-  # ── Config profil par défaut ─────────────────────────────────────────────────
-  home.file.".config/apprendys/icon-set".text = "junior\n";
+  # icon-set est un état runtime (écrit par l'installateur et l'app profil) — PAS un home.file : session-init défaut sur junior si absent.
 
   # ── Thème GTK — Greybird (gris XFCE, reposant pour enfants DYS) ────────────
   gtk = {
