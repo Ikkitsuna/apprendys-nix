@@ -125,6 +125,8 @@ writeShellApplication {
       fatal "Le disque choisi ($TARGET) est introuvable."
     fi
 
+    TARGET_DESC="$(lsblk -dno SIZE,MODEL "$TARGET" 2>/dev/null | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' | tr -s ' ' || true)"
+
     # ── CLIC 2b : prénom + profil (forms) ──
     FORM="$(zenity --forms --width=460 \
       --title="Personnaliser Apprendys" \
@@ -142,6 +144,11 @@ writeShellApplication {
     PRENOM="$(printf '%s' "$PRENOM" | tr -d '\000-\037|' | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
     [ -z "$PRENOM" ] && PRENOM="Apprendys"
 
+    # Variante sûre pour l'affichage Pango (zenity --question/--info en markup) :
+    # & < > casseraient le rendu GTK. Le prénom RÉEL (non échappé) reste écrit tel quel
+    # dans user-name plus bas.
+    PRENOM_AFF="$(printf '%s' "$PRENOM" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')"
+
     # Profil → icon-set (junior pour Enfant, adult pour Adulte). Défaut junior.
     case "$PROFIL" in
       Adulte) ICON_SET="adult" ;;
@@ -151,7 +158,7 @@ writeShellApplication {
     # ── CLIC 3 : confirmation finale ──
     if ! zenity --question --width=480 --icon-name=dialog-warning \
       --title="Dernière vérification" \
-      --text="<b>Récapitulatif</b>\n\nDisque : <b>$TARGET</b>  (sera effacé)\nPrénom : <b>$PRENOM</b>\nProfil : <b>$PROFIL</b>\n\nC'est le dernier moment pour annuler.\nAprès « Installer », le disque sera effacé." \
+      --text="<b>Récapitulatif</b>\n\nDisque : <b>$TARGET</b> ($TARGET_DESC)  (sera effacé)\nPrénom : <b>$PRENOM_AFF</b>\nProfil : <b>$PROFIL</b>\n\nC'est le dernier moment pour annuler.\nAprès « Installer », le disque sera effacé." \
       --ok-label="Installer" --cancel-label="Annuler"; then
       exit 0
     fi
@@ -170,6 +177,10 @@ writeShellApplication {
       local TARGET="$1"
 
       log_step() { printf '%s\n' "$1" > "$STEPFILE"; printf '\n=== %s ===\n' "$1" >> "$LOG"; }
+
+      # Re-run propre : démonter tout reliquat d'une tentative précédente
+      # (sinon partprobe EBUSY → table non relue → résolution de partition faussée).
+      umount -R /mnt >>"$LOG" 2>&1 || true
 
       echo "2" ; echo "# Préparation du disque..."
       log_step "Effacement des signatures (wipefs)"
