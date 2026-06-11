@@ -25,6 +25,7 @@ in writeShellApplication {
     set +e   # tolérance pannes — jamais crasher devant l'enfant
 
     PIDFILE="/tmp/apprendys-stt.pid"
+    LOCKDIR="/tmp/apprendys-stt.lock"
     P4_STT="/mnt/apprendys/models/stt"
     NIX_MODEL="${vosk-model-fr-small}/share/vosk-models/fr-small"
 
@@ -37,14 +38,22 @@ in writeShellApplication {
       exit 1
     fi
 
+    # --- Section critique : verrou anti double-appui (mkdir = atomique POSIX) ---
+    if ! mkdir "$LOCKDIR" 2>/dev/null; then
+      exit 0   # une autre invocation est en cours (double-appui) — on ignore
+    fi
+    trap 'rmdir "$LOCKDIR" 2>/dev/null' EXIT
+
     # Toggle : déjà en cours → on arrête
     if [ -f "$PIDFILE" ]; then
       PID=$(cat "$PIDFILE")
-      if kill -0 "$PID" 2>/dev/null; then
+      # Guard : rejeter un PID non numérique (fichier corrompu après crash)
+      case "$PID" in (*[!0-9]*|"") PID="" ;; esac
+      if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
         kill "$PID" 2>/dev/null
         rm -f "$PIDFILE"
         notify-send -i audio-input-microphone "Dictée terminée" "Le micro est éteint." -t 2000
-        exit 0
+        exit 0   # trap releases LOCKDIR
       fi
       rm -f "$PIDFILE"
     fi
@@ -55,14 +64,27 @@ Appuie encore pour arrêter." -t 3000
     export VOSK_MODEL
 
     python3 -u << 'ENDPY' &
-import json, subprocess, sys, os, signal
-from vosk import Model, KaldiRecognizer
+import json, subprocess, sys, os, signal, ctypes
 
-model = Model(os.environ["VOSK_MODEL"])
-rec = KaldiRecognizer(model, 16000)
+# Fix 3 : arecord meurt avec python même en cas de kill -9 (PDEATHSIG)
+PR_SET_PDEATHSIG = 1
+libc = ctypes.CDLL("libc.so.6", use_errno=True)
+def _die_with_parent():
+    libc.prctl(PR_SET_PDEATHSIG, signal.SIGTERM)
+
+# Fix 4 : guard chargement modèle
+try:
+    from vosk import Model, KaldiRecognizer
+    model = Model(os.environ["VOSK_MODEL"])
+    rec = KaldiRecognizer(model, 16000)
+except Exception as e:
+    print(f"apprendys-stt: erreur chargement modèle: {e}", file=sys.stderr)
+    sys.exit(1)
+
 proc = subprocess.Popen(
     ["arecord", "-f", "S16_LE", "-r", "16000", "-c", "1", "-t", "raw", "-q"],
-    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+    preexec_fn=_die_with_parent)
 
 def cleanup(sig, frame):
     proc.terminate()
@@ -75,7 +97,11 @@ while True:
     if len(data) == 0:
         break
     if rec.AcceptWaveform(data):
-        text = json.loads(rec.Result()).get("text", "").strip()
+        # Fix 4 : guard résultat JSON malformé
+        try:
+            text = json.loads(rec.Result()).get("text", "").strip()
+        except (ValueError, KeyError):
+            continue
         if text:
             subprocess.run(["xdotool", "type", "--delay", "20", text + " "],
                            env={**os.environ, "DISPLAY": os.environ.get("DISPLAY", ":0")})
@@ -83,6 +109,12 @@ ENDPY
 
     STT_PID=$!
     echo "$STT_PID" > "$PIDFILE"
+
+    # Libérer le verrou AVANT wait : une invocation ultérieure doit pouvoir
+    # entrer dans la section critique pour toggler l'arrêt.
+    trap - EXIT
+    rmdir "$LOCKDIR" 2>/dev/null
+
     wait "$STT_PID" 2>/dev/null
     rm -f "$PIDFILE"
   '';
