@@ -485,111 +485,17 @@ XMLEOF
   '';
 
   # ── Autostart session init ───────────────────────────────────────────────────
-  home.file.".config/autostart/apprendys-session-init.desktop".text = ''
-    [Desktop Entry]
-    Type=Application
-    Name=Apprendys Session Init
-    Exec=/home/apprendys/.local/bin/apprendys-session-init.sh
-    Hidden=false
-    NoDisplay=true
-    X-GNOME-Autostart-enabled=true
-  '';
-
-  # ── Script session init — V1 fidèle avec sha256 checksum ────────────────────
-  home.file.".local/bin/apprendys-session-init.sh" = {
-    executable = true;
+  # Le binaire apprendys-session-init est fourni par packages/apprendys-session-init.nix
+  # (câblé dans modules/apps.nix > systemPackages) — plus de script inline ici.
+  home.file.".config/autostart/apprendys-session-init.desktop" = {
+    force = true;
     text = ''
-      #!/usr/bin/env bash
-      # Apprendys session init — exécuté au démarrage de session XFCE
-
-      # 1. Copier les icônes du profil actif vers la racine
-      ICON_SET=$(cat "$HOME/.config/apprendys/icon-set" 2>/dev/null | tr -d '[:space:]')
-      [ -z "$ICON_SET" ] && ICON_SET="junior"
-      SRC="$HOME/.local/share/icons/apprendys/$ICON_SET"
-      DST="$HOME/.local/share/icons/apprendys"
-      if [ -d "$SRC" ]; then
-        cp -f "$SRC"/*.png "$DST/" 2>/dev/null || true
-      fi
-
-      # 2. Briser les symlinks Nix store → fichiers réels writables (évite flèche + cadenas)
-      # chmod 755 requis : gio set (xattr trusted) échoue sur fichier non-writable
-      for f in "$HOME/Bureau/"*.desktop; do
-        [ -f "$f" ] || continue
-        if [ -L "$f" ] || [ ! -w "$f" ]; then
-          cp --remove-destination "$(readlink -f "$f" 2>/dev/null || echo "$f")" "$f" 2>/dev/null || true
-          chmod 755 "$f" 2>/dev/null || true
-        fi
-      done
-
-      # Trust des .desktop bureau — attendre que GVfs soit prêt (max 15s)
-      for i in $(seq 1 15); do
-        gio info "$HOME/Bureau/mes-devoirs.desktop" >/dev/null 2>&1 && break
-        sleep 1
-      done
-
-      # XFCE 4.18 exige trusted=true ET xfce-exe-checksum=SHA256(contenu)
-      for f in "$HOME/Bureau/mes-devoirs.desktop" \
-               "$HOME/Bureau/je-recherche.desktop" \
-               "$HOME/Bureau/mes-lecons.desktop"; do
-        [ -f "$f" ] || continue
-        CHKSUM=$(sha256sum "$f" 2>/dev/null | cut -d' ' -f1)
-        gio set "$f" metadata::trusted true 2>/dev/null || true
-        [ -n "$CHKSUM" ] && gio set "$f" metadata::xfce-exe-checksum "$CHKSUM" 2>/dev/null || true
-      done
-
-      # 3. Wallpaper dynamique — détecte le vrai nom du moniteur
-      WALLPAPER="$HOME/.local/share/backgrounds/apprendys-wallpaper.png"
-      if [ -f "$WALLPAPER" ]; then
-        for monitor in $(xrandr --listmonitors 2>/dev/null | tail -n +2 | awk '{print $NF}'); do
-          for ws in 0 1 2 3; do
-            xfconf-query -c xfce4-desktop \
-              -p "/backdrop/screen0/monitor''${monitor}/workspace''${ws}/last-image" \
-              -s "$WALLPAPER" --create -t string 2>/dev/null || true
-            xfconf-query -c xfce4-desktop \
-              -p "/backdrop/screen0/monitor''${monitor}/workspace''${ws}/image-style" \
-              -s 5 --create -t int 2>/dev/null || true
-          done
-        done
-      fi
-
-      # 4. Panel fond noir — xfce4-panel ignore background-color au démarrage,
-      # on force via xfconf-query après que le panel soit actif
-      xfconf-query -c xfce4-panel -p /panels/panel-1/background-style -t uint -s 1 --create 2>/dev/null || true
-      xfconf-query -c xfce4-panel -p /panels/panel-1/background-style -s 1 2>/dev/null || true
-      xfconf-query -c xfce4-panel -p /panels/panel-1/background-color -t string -s '#000000ff' --create 2>/dev/null || true
-      xfconf-query -c xfce4-panel -p /panels/panel-1/background-color -s '#000000ff' 2>/dev/null || true
-      xfce4-panel --restart 2>/dev/null &
-
-      # 5. Taille menu Whisker — 45% de la largeur écran, ratio 3:2
-      SCREEN_W=$(xrandr --current 2>/dev/null | awk '/ connected.*[0-9]+x[0-9]+/{match($0,/[0-9]+x[0-9]+/); print substr($0,RSTART,RLENGTH)}' | cut -dx -f1 | head -1)
-      if [ -n "$SCREEN_W" ] && [ "$SCREEN_W" -gt 0 ] 2>/dev/null; then
-        MENU_W=$(( SCREEN_W * 45 / 100 ))
-        MENU_H=$(( MENU_W * 67 / 100 ))
-        xfconf-query -c xfce4-panel -p /plugins/plugin-1/menu-width -t int -s "$MENU_W" --create 2>/dev/null || true
-        xfconf-query -c xfce4-panel -p /plugins/plugin-1/menu-height -t int -s "$MENU_H" --create 2>/dev/null || true
-        xfconf-query -c xfce4-panel -p /plugins/plugin-1/menu-width -s "$MENU_W" 2>/dev/null || true
-        xfconf-query -c xfce4-panel -p /plugins/plugin-1/menu-height -s "$MENU_H" 2>/dev/null || true
-      fi
-
-      # 5. Forcer les icônes bureau : style=2 (files) + pas d'icônes système
-      # xfdesktop écrase les valeurs XML au démarrage → on les remet après
-      xfconf-query -c xfce4-desktop -p /desktop-icons/style -t int -s 2 --create 2>/dev/null || true
-      xfconf-query -c xfce4-desktop -p /desktop-icons/icon-size -t uint -s 72 --create 2>/dev/null || true
-      xfconf-query -c xfce4-desktop -p /desktop-icons/file-icons/show-home -t bool -s false --create 2>/dev/null || true
-      xfconf-query -c xfce4-desktop -p /desktop-icons/file-icons/show-trash -t bool -s false --create 2>/dev/null || true
-      xfconf-query -c xfce4-desktop -p /desktop-icons/file-icons/show-filesystem -t bool -s false --create 2>/dev/null || true
-      xfconf-query -c xfce4-desktop -p /desktop-icons/file-icons/show-removable -t bool -s false --create 2>/dev/null || true
-      # Mettre à jour si la propriété existe déjà
-      xfconf-query -c xfce4-desktop -p /desktop-icons/style -s 2 2>/dev/null || true
-      xfconf-query -c xfce4-desktop -p /desktop-icons/file-icons/show-home -s false 2>/dev/null || true
-      xfconf-query -c xfce4-desktop -p /desktop-icons/file-icons/show-trash -s false 2>/dev/null || true
-      xfconf-query -c xfce4-desktop -p /desktop-icons/file-icons/show-filesystem -s false 2>/dev/null || true
-      xfconf-query -c xfce4-desktop -p /desktop-icons/file-icons/show-removable -s false 2>/dev/null || true
-
-      # 5. Redémarrer xfdesktop pour appliquer trust + wallpaper + icônes corrigées
-      pkill xfdesktop 2>/dev/null || true
-      sleep 1
-      xfdesktop &
+      [Desktop Entry]
+      Type=Application
+      Name=Apprendys Session Init
+      Exec=apprendys-session-init
+      X-GNOME-Autostart-enabled=true
+      NoDisplay=true
     '';
   };
 

@@ -10,6 +10,10 @@ let
   apprendys-stt = pkgs.callPackage ../packages/apprendys-stt.nix {
     inherit vosk vosk-model-fr-small;
   };
+  apprendys-session-init = pkgs.callPackage ../packages/apprendys-session-init.nix {
+    inherit lirecouleur;
+    xrandr = pkgs.xorg.xrandr;
+  };
 in {
 
   # Forcer l'inclusion des données partagées (piper-voices, lirecouleur, vosk-model)
@@ -37,6 +41,9 @@ in {
     xfce4-whiskermenu-plugin
     xfce4-notifyd
     # xfce4-screensaver retiré — verrouillage inadapté pour un OS enfant
+
+    # Session init Apprendys (autostart XFCE)
+    apprendys-session-init   # icon-set, LireCouleur unopkg, locks stale, desktop trust
 
     # Accessibilité — TTS / STT
     apprendys-tts            # wrapper Piper + espeak fallback (Ctrl+Espace)
