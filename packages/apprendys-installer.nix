@@ -42,10 +42,16 @@ writeShellApplication {
     # CE chemin ET le chemin store : voir modules/installer.nix.
     if [ "$(id -u)" -ne 0 ]; then
       SELF="$(command -v apprendys-installer)"
-      exec sudo -n "$SELF" "$@"
+      exec sudo -n --preserve-env=DISPLAY,XAUTHORITY "$SELF" "$@"
     fi
 
     export DISPLAY="''${DISPLAY:-:0}"
+    # Repli si XAUTHORITY n'a pas survécu : cookie SDDM puis ~/.Xauthority
+    if [ -z "''${XAUTHORITY:-}" ]; then
+      for f in /run/sddm/xauth_* /home/apprendys/.Xauthority; do
+        [ -f "$f" ] && export XAUTHORITY="$f" && break
+      done
+    fi
 
     # Helper : message d'erreur fatal + log + sortie non-zéro
     fatal() {
@@ -74,22 +80,23 @@ writeShellApplication {
     # Règle : on garde TYPE=disk, on rejette TRAN=usb, et les noms loop*/sr*/zram*.
     # En VM (Task 10) le disque est virtio → TRAN vide ou "virtio" → gardé. OK.
     build_disk_list() {
-      # lsblk -P : sortie clé="valeur" sûre même si MODEL contient des espaces.
-      # On `eval` chaque ligne pour peupler NAME/SIZE/MODEL/TRAN/TYPE.
-      local NAME SIZE MODEL TRAN TYPE line
-      while IFS= read -r line; do
-        NAME=""; SIZE=""; MODEL=""; TRAN=""; TYPE=""
-        eval "$line"
-        [ "$TYPE" = "disk" ] || continue
-        [ "$TRAN" = "usb" ] && continue
+      # Lecture par champ — JAMAIS d'eval sur une sortie contenant des chaînes
+      # contrôlées par le matériel (MODEL) : un firmware piégé = exécution root.
+      local NAME SIZE MODEL TRAN TYPE
+      while IFS= read -r NAME; do
+        [ -n "$NAME" ] || continue
         case "$NAME" in
           loop*|sr*|zram*|fd*) continue ;;
         esac
-        # Modèle propre (peut être vide en VM)
+        TYPE="$(lsblk -dno TYPE "/dev/$NAME" 2>/dev/null || true)"
+        [ "$TYPE" = "disk" ] || continue
+        TRAN="$(lsblk -dno TRAN "/dev/$NAME" 2>/dev/null || true)"
+        [ "$TRAN" = "usb" ] && continue
+        SIZE="$(lsblk -dno SIZE "/dev/$NAME" 2>/dev/null || true)"
+        MODEL="$(lsblk -dno MODEL "/dev/$NAME" 2>/dev/null | tr -d '\000-\037' || true)"
         [ -z "$MODEL" ] && MODEL="(disque)"
-        # radiolist : FALSE(sélection) DEVICE TAILLE MODÈLE
         printf 'FALSE\n/dev/%s\n%s\n%s\n' "$NAME" "$SIZE" "$MODEL"
-      done < <(lsblk -dn -o NAME,SIZE,MODEL,TRAN,TYPE -P 2>/dev/null)
+      done < <(lsblk -dno NAME 2>/dev/null)
     }
 
     DISK_ROWS="$(build_disk_list || true)"
