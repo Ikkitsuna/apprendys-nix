@@ -1,6 +1,6 @@
 { config, pkgs, lib, ... }: {
   # Apprendys installé sur PC dédié (le « vieux PC du placard »)
-  imports = [ ../modules/hardware-quirks.nix ];
+  imports = [ ../modules/hardware-quirks.nix ../modules/ota-installed.nix ];
 
   networking.hostName = "apprendys";
 
