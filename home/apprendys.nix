@@ -32,6 +32,7 @@
   # ── Bureau (Desktop XDG FR) — 3 icônes comme V1 ────────────────────────────
   # Les icônes pointent vers la racine (copiée par session-init selon profil actif)
   home.file."Bureau/mes-devoirs.desktop" = {
+    force = true;   # fichier pré-existant sur les systèmes migrés — HM doit écraser
     text = ''
       [Desktop Entry]
       Version=1.0
@@ -48,6 +49,7 @@
   };
 
   home.file."Bureau/je-recherche.desktop" = {
+    force = true;   # fichier pré-existant sur les systèmes migrés — HM doit écraser
     text = ''
       [Desktop Entry]
       Version=1.0
@@ -64,6 +66,7 @@
   };
 
   home.file."Bureau/mes-lecons.desktop" = {
+    force = true;   # fichier pré-existant sur les systèmes migrés — HM doit écraser
     text = ''
       [Desktop Entry]
       Version=1.0
