@@ -6,18 +6,11 @@
   # Ces bindings sont configurés dans home/apprendys.nix via xfce4-keyboard-shortcuts
 
   # Services TTS/STT ne sont pas des daemons — lancés à la demande par scripts
-  # Les scripts apprendys-tts.sh / apprendys-stt.sh sont déployés dans /usr/local/bin
+  # apprendys-tts et apprendys-stt sont câblés dans modules/apps.nix
 
   environment.systemPackages = with pkgs; [
-    # TTS
     piper-tts
-
-    # STT — Vosk n'est pas dans nixpkgs; à packager en mkDerivation custom
-    # TODO: packages/vosk.nix — fetchurl depuis vosk-api releases
     python3
-    python3Packages.pyaudio
-
-    # Accessibilité curseur
     xsetroot
   ];
 

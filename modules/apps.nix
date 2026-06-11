@@ -5,12 +5,17 @@ let
   apprendys-tts = pkgs.callPackage ../packages/apprendys-tts.nix {
     inherit piper-voice-fr-siwis;
   };
+  vosk = pkgs.callPackage ../packages/vosk.nix {};
+  vosk-model-fr-small = pkgs.callPackage ../packages/vosk-model-fr-small.nix {};
+  apprendys-stt = pkgs.callPackage ../packages/apprendys-stt.nix {
+    inherit vosk vosk-model-fr-small;
+  };
 in {
 
-  # Forcer l'inclusion des données partagées (piper-voices, lirecouleur)
+  # Forcer l'inclusion des données partagées (piper-voices, lirecouleur, vosk-model)
   # qui sont des paquets share/-only — non inclus par iso-image.nix par défaut
-  system.extraDependencies = [ piper-voice-fr-siwis lirecouleur ];
-  environment.pathsToLink = [ "/share/piper-voices" "/share/lirecouleur" ];
+  system.extraDependencies = [ piper-voice-fr-siwis lirecouleur vosk-model-fr-small ];
+  environment.pathsToLink = [ "/share/piper-voices" "/share/lirecouleur" "/share/vosk-models" ];
 
   environment.systemPackages = with pkgs; [
     # Outils bureau Apprendys
@@ -38,7 +43,8 @@ in {
     piper-tts                # binaire Piper (utilisé par apprendys-tts)
     piper-voice-fr-siwis     # voix FR siwis (~80MB) — validée terrain V14
     espeak-ng                # fallback TTS
-    # apprendys-stt          # à ajouter quand Vosk packagé
+    apprendys-stt            # Le Perroquet — dictée Vosk offline (Ctrl+Maj+Espace)
+    vosk-model-fr-small      # modèle FR small (~50MB) — baked dans le store
 
     # LibreOffice — extension DYS LireCouleur (à activer manuellement
     # ou via un service NixOS post-install)
