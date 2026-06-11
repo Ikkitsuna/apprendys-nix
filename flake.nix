@@ -71,6 +71,21 @@
         extraModules = [ ./modules/school.nix ];
       };
 
+      # ISO installeur — LE produit du Masterplan V3 (clé 79 €)
+      # Embarque la closure de apprendys-installed → nixos-install 100 % offline.
+      apprendys-installer-iso = nixos-generators.nixosGenerate {
+        inherit system;
+        format = "iso";
+        specialArgs = {
+          installedSystem =
+            self.nixosConfigurations.apprendys-installed.config.system.build.toplevel;
+        };
+        modules = commonModules ++ usbModules ++ [
+          ./profiles/light.nix
+          ./modules/installer.nix
+        ];
+      };
+
       # Alias par défaut (pour `nix build` sans cible)
       default = mkApprendysIso { profile = ./profiles/light.nix; };
     };
