@@ -80,12 +80,20 @@
     # Build/run : nixos-rebuild switch --flake .#apprendys-dev
     # Pas d'ISO ici — c'est une VM normale qu'on rebuild en place
     # ──────────────────────────────────────────────────────────────────
-    nixosConfigurations.apprendys-dev = nixpkgs.lib.nixosSystem {
-      inherit system;
-      modules = commonModules ++ [
-        ./modules/dev-vm.nix
-        ./hardware/dev-vm.nix
-      ];
+    nixosConfigurations = {
+      apprendys-dev = nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = commonModules ++ [
+          ./modules/dev-vm.nix
+          ./hardware/dev-vm.nix
+        ];
+      };
+
+      # Système installé sur PC dédié — cible de l'installateur 3-clics (Masterplan V3)
+      apprendys-installed = nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = commonModules ++ [ ./profiles/installed.nix ];
+      };
     };
   };
 }
