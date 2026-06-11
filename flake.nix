@@ -83,6 +83,7 @@
         modules = commonModules ++ usbModules ++ [
           ./profiles/light.nix
           ./modules/installer.nix
+          ./modules/release.nix
         ];
       };
 
