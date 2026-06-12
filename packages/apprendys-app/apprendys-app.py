@@ -730,12 +730,10 @@ class MonApprendys(Gtk.Window):
             apply_profile(self.sel_profile, self.env)
             self.saved_profile = self.sel_profile
 
-        d = Gtk.MessageDialog(parent=self, flags=0,
-                              message_type=Gtk.MessageType.INFO,
-                              buttons=Gtk.ButtonsType.OK,
-                              text='Changements appliqués !')
-        d.run(); d.destroy()
-        Gtk.main_quit()
+        # Pas de popup ni de fermeture : l'effet est visible à l'écran
+        # (retour Florent 12/06 — et le dialogue sortait en 10x10 à cause
+        # du restart xfdesktop pendant son mapping). L'app reste ouverte
+        # pour continuer à essayer des styles.
 
     def _on_close(self, widget, event):
         if not self._has_unsaved():
@@ -755,7 +753,7 @@ class MonApprendys(Gtk.Window):
         dialog.destroy()
         if response == Gtk.ResponseType.OK:
             self._on_apply_all(None)
-            return True  # _on_apply_all appelle main_quit
+            return False  # applique puis laisse la fenêtre se fermer
         elif response == Gtk.ResponseType.REJECT:
             return False  # quitte sans appliquer
         return True  # annule la fermeture
