@@ -14,6 +14,9 @@ let
     inherit lirecouleur vosk vosk-model-fr-small;
     xrandr = pkgs.xorg.xrandr;
   };
+  apprendys-app = pkgs.callPackage ../packages/apprendys-app.nix {
+    inherit apprendys-session-init;
+  };
 in {
 
   # Forcer l'inclusion des données partagées (piper-voices, lirecouleur, vosk-model)
@@ -44,6 +47,9 @@ in {
 
     # Session init Apprendys (autostart XFCE)
     apprendys-session-init   # icon-set, LireCouleur unopkg, locks stale, desktop trust
+
+    # Mon Apprendys — personnalisation (styles, police, curseur) + espace parent
+    apprendys-app
 
     # Accessibilité — TTS / STT
     apprendys-tts            # wrapper Piper + espeak fallback (Ctrl+Espace)

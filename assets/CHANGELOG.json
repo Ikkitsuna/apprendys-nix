@@ -1,0 +1,15 @@
+{
+  "2.0.0": {
+    "titre": "Apprendys nouvelle génération",
+    "date": "juin 2026",
+    "type": "feature",
+    "resume": "Apprendys s'installe désormais sur votre ordinateur : plus rapide, plus simple, toujours hors-ligne.",
+    "details": [
+      "Installation en 3 clics depuis la clé USB",
+      "Trois styles au choix : Mignon, Classique, Monochrome",
+      "Lecture à voix haute (Ctrl+Espace) et dictée vocale (Ctrl+Maj+Espace) incluses",
+      "Vos documents sont sauvegardés automatiquement dans Mes Devoirs",
+      "Mises à jour automatiques et sûres : en cas de souci, l'ordinateur redémarre sur la version précédente"
+    ]
+  }
+}

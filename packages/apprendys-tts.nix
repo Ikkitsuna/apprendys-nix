@@ -8,6 +8,7 @@
 , pulseaudio    # paplay
 , coreutils
 , findutils
+, gawk          # calcul length_scale (vitesse)
 , procps        # pkill
 , piper-voice-fr-siwis    # voix par défaut, injectée par apps.nix
 }:
@@ -24,7 +25,7 @@
 writeShellApplication {
   name = "apprendys-tts";
   runtimeInputs = [
-    piper-tts espeak-ng xsel xclip libnotify pulseaudio coreutils findutils procps
+    piper-tts espeak-ng xsel xclip libnotify pulseaudio coreutils findutils gawk procps
   ];
   text = ''
     set +e  # tolérance pannes — ne jamais crasher
@@ -53,16 +54,22 @@ writeShellApplication {
     pkill -f "paplay.*apprendys-tts" 2>/dev/null || true
     pkill -f "espeak-ng.*-v fr" 2>/dev/null || true
 
+    # Vitesse réglée via Mon Apprendys (0.7 lente → 1.5 rapide, défaut 1.0).
+    # Piper : length_scale = 1/vitesse (plus grand = plus lent).
+    SPEED=$(cat "$HOME/.config/apprendys/tts-speed" 2>/dev/null || echo 1.0)
+    LENGTH_SCALE=$(awk -v s="$SPEED" 'BEGIN{ if (s+0 < 0.5 || s+0 > 2) s=1; printf "%.2f", 1/s }')
+    ESPEAK_WPM=$(awk -v s="$SPEED" 'BEGIN{ if (s+0 < 0.5 || s+0 > 2) s=1; printf "%d", 140*s }')
+
     # Piper (voix IA) avec fallback espeak-ng
     if [ -n "$MODEL" ] && command -v piper >/dev/null 2>&1; then
-      if echo "$TEXT" | piper --model "$MODEL" --output_file "$TMPWAV" 2>/dev/null; then
+      if echo "$TEXT" | piper --model "$MODEL" --length_scale "$LENGTH_SCALE" --output_file "$TMPWAV" 2>/dev/null; then
         paplay "$TMPWAV" 2>/dev/null &
         ( sleep 30 && rm -f "$TMPWAV" ) &
       else
-        espeak-ng -v fr -s 140 -p 50 "$TEXT" &
+        espeak-ng -v fr -s "$ESPEAK_WPM" -p 50 "$TEXT" &
       fi
     else
-      espeak-ng -v fr -s 140 -p 50 "$TEXT" &
+      espeak-ng -v fr -s "$ESPEAK_WPM" -p 50 "$TEXT" &
     fi
   '';
 }

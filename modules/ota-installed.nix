@@ -31,4 +31,19 @@
       RandomizedDelaySec = "2h";
     };
   };
+
+  # Bouton « Vérifier maintenant » de Mon Apprendys (espace parent PIN) :
+  # polkit (comme la V1, 50-apprendys-update.rules) — pas de sudo sur le
+  # système installé. Seul le START de CE service précis est autorisé.
+  security.polkit.enable = true;
+  security.polkit.extraConfig = ''
+    polkit.addRule(function(action, subject) {
+      if (action.id == "org.freedesktop.systemd1.manage-units" &&
+          action.lookup("unit") == "apprendys-ota.service" &&
+          action.lookup("verb") == "start" &&
+          subject.user == "apprendys") {
+        return polkit.Result.YES;
+      }
+    });
+  '';
 }

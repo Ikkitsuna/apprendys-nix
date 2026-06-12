@@ -110,6 +110,18 @@ writeShellApplication {
       UI_FONT="Luciole 13"
     fi
 
+    # Choix utilisateur via Mon Apprendys (font-style/font-size) : il PRIME
+    # sur la police par défaut de l'ambiance — sinon chaque login écraserait
+    # le réglage de la personne.
+    USER_FONT_STYLE=$(tr -cd 'a-z' < "$CONFIG_DIR/font-style" 2>/dev/null || true)
+    USER_FONT_SIZE=$(tr -cd '0-9' < "$CONFIG_DIR/font-size" 2>/dev/null || true)
+    if [ -n "$USER_FONT_STYLE" ] && [ -n "$USER_FONT_SIZE" ]; then
+      case "$USER_FONT_STYLE" in
+        opendyslexic) UI_FONT="OpenDyslexic $USER_FONT_SIZE" ;;
+        luciole)      UI_FONT="Luciole $USER_FONT_SIZE" ;;
+      esac
+    fi
+
     # Appliquer thème GTK + icônes + police + bordures fenêtres
     xfconf-query -c xsettings -p /Net/ThemeName     -s "$GTK_THEME"  --create -t string 2>/dev/null || true
     xfconf-query -c xsettings -p /Net/IconThemeName  -s "$ICON_THEME" --create -t string 2>/dev/null || true

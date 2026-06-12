@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Mon Apprendys
+Comment=Choisir mon style, ma police et mes réglages
+Exec=@out@/bin/apprendys-app
+Icon=/home/apprendys/.local/share/icons/apprendys/panel.png
+Categories=Settings;
+Terminal=false
+Type=Application

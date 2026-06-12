@@ -137,7 +137,7 @@ writeShellApplication {
       --title="Personnaliser Apprendys" \
       --text="Encore deux informations :" \
       --add-entry="Prénom" \
-      --add-combo="Profil" --combo-values="Enfant|Adulte" \
+      --add-combo="Style" --combo-values="Mignon (doux et coloré)|Classique (bleu, apaisant)|Monochrome (sobre)" \
       2>/dev/null)" || exit 0
 
     # zenity --forms sépare les champs par '|'
@@ -154,20 +154,19 @@ writeShellApplication {
     # dans user-name plus bas.
     PRENOM_AFF="$(printf '%s' "$PRENOM" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')"
 
-    # Profil → icon-set (junior pour Enfant, teen pour Adulte). Défaut junior.
-    # NB : Adulte = set « teen » (icônes bleues) et non « adult » (noires) —
-    # le trait noir se fond dans le fond slate de l'ambiance adulte (retour
-    # Florent 12/06). teen → ambiance adulte dans session-init, même rendu
-    # sombre, icônes lisibles.
+    # Style → icon-set. Nommé par STYLE et non par âge (décision Florent
+    # 12/06) : l'apparence décrit le look, jamais la personne. Modifiable
+    # ensuite dans « Mon Apprendys ». Défaut junior (Mignon).
     case "$PROFIL" in
-      Adulte) ICON_SET="teen" ;;
-      *)      ICON_SET="junior" ;;
+      Monochrome*) ICON_SET="adult" ;;
+      Classique*)  ICON_SET="teen" ;;
+      *)           ICON_SET="junior" ;;
     esac
 
     # ── CLIC 3 : confirmation finale ──
     if ! zenity --question --width=480 --icon-name=dialog-warning \
       --title="Dernière vérification" \
-      --text="<b>Récapitulatif</b>\n\nDisque : <b>$TARGET</b> ($TARGET_DESC)  (sera effacé)\nPrénom : <b>$PRENOM_AFF</b>\nProfil : <b>$PROFIL</b>\n\nC'est le dernier moment pour annuler.\nAprès « Installer », le disque sera effacé." \
+      --text="<b>Récapitulatif</b>\n\nDisque : <b>$TARGET</b> ($TARGET_DESC)  (sera effacé)\nPrénom : <b>$PRENOM_AFF</b>\nStyle : <b>$PROFIL</b>\n\nC'est le dernier moment pour annuler.\nAprès « Installer », le disque sera effacé." \
       --ok-label="Installer" --cancel-label="Annuler"; then
       exit 0
     fi

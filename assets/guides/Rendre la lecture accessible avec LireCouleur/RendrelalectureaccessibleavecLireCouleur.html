@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rendre la lecture accessible avec LireCouleur — Apprendys</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --blue: #77B4CE; --blue-dark: #4a8fa8; --blue-pale: #eef6fb;
+      --green: #A5CCA6; --green-dark: #7aaa7b; --green-pale: #eef6ee;
+      --amber: #f5a623; --amber-pale: #fff8ee;
+      --bg: #f2f7fb; --white: #ffffff; --text: #1a2c38; --muted: #5a7282;
+      --border: rgba(119,180,206,.18); --shadow: 0 2px 12px rgba(74,143,168,.10);
+      --font: 'Nunito','Arial Rounded MT Bold',Arial,sans-serif;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text);
+      min-height: 100vh; display: flex; flex-direction: column; -webkit-font-smoothing: antialiased; }
+
+    body.green { --accent: var(--green); --accent-dark: var(--green-dark); --accent-pale: var(--green-pale);
+      --accent-shadow: rgba(165,204,166,.4); }
+
+    /* NAV */
+    .topnav { background: var(--white); border-bottom: 1px solid var(--border);
+      padding: 14px 24px; display: flex; justify-content: space-between; align-items: center;
+      position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 8px rgba(74,143,168,.08); }
+    .topnav .back { text-decoration: none; color: var(--accent-dark); font-weight: 700;
+      font-size: 14px; display: flex; align-items: center; gap: 6px; transition: gap .2s; }
+    .topnav .back:hover { gap: 10px; }
+    .topnav .brand { font-size: 11px; font-weight: 800; color: var(--muted);
+      letter-spacing: .1em; text-transform: uppercase; }
+
+    /* HERO */
+    .hero { padding: 52px 24px 0; text-align: center; position: relative; overflow: hidden;
+      background-size: 220% 220%; animation: drift 22s ease-in-out infinite; }
+    body.green .hero { background: linear-gradient(135deg, #6aa86b 0%, #A5CCA6 45%, #82c4a3 100%); }
+    @keyframes drift { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+    .hero::before,.hero::after { content:''; position: absolute; border-radius: 50%;
+      background: rgba(255,255,255,.07); pointer-events: none; }
+    .hero::before { width: 340px; height: 340px; top: -180px; left: -60px; }
+    .hero::after  { width: 220px; height: 220px; top: -60px; right: 40px; }
+    .hero-icon { font-size: 52px; margin-bottom: 10px; display: block;
+      animation: fadeUp .5s ease both; filter: drop-shadow(0 4px 12px rgba(0,0,0,.15)); }
+    .hero-meta { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 14px; }
+    .hero-tag, .hero-time { font-size: 11px; font-weight: 800; letter-spacing: .1em;
+      text-transform: uppercase; padding: 5px 14px; border-radius: 100px; }
+    .hero-tag { background: rgba(255,255,255,.2); color: rgba(255,255,255,.95);
+      border: 1px solid rgba(255,255,255,.28); }
+    .hero-time { background: rgba(255,255,255,.12); color: rgba(255,255,255,.82);
+      border: 1px solid rgba(255,255,255,.18); font-weight: 600; letter-spacing: .05em; font-size: 12px; text-transform: none; }
+    .hero h1 { font-size: clamp(1.5rem,4.5vw,2.2rem); font-weight: 900; color: white;
+      letter-spacing: -.02em; line-height: 1.15; margin-bottom: 10px;
+      text-shadow: 0 2px 20px rgba(0,0,0,.1); animation: fadeUp .5s ease .1s both; }
+    .hero-sub { font-size: clamp(.9rem,2vw,1rem); color: rgba(255,255,255,.82); font-weight: 500;
+      margin-bottom: 48px; animation: fadeUp .5s ease .2s both; }
+    .hero-wave { display: block; width: 100%; height: 50px; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+    /* MAIN */
+    main { flex: 1; max-width: 740px; margin: 0 auto; padding: 44px 24px 72px; width: 100%; }
+
+    /* Intro paragraph */
+    .intro-p { font-size: .98rem; line-height: 1.75; color: var(--muted); margin-bottom: 36px;
+      padding: 20px 22px; background: var(--white); border-radius: 14px; box-shadow: var(--shadow);
+      border-left: 3px solid var(--accent); }
+    .intro-p strong { color: var(--text); }
+
+    /* STEPS */
+    .step { display: flex; gap: 20px; margin-bottom: 36px; animation: fadeUp .5s ease both; }
+    .step:nth-child(1){animation-delay:.1s}.step:nth-child(2){animation-delay:.2s}
+    .step:nth-child(3){animation-delay:.3s}.step:nth-child(4){animation-delay:.4s}
+    .step:nth-child(5){animation-delay:.5s}.step:nth-child(6){animation-delay:.6s}
+    .step:nth-child(7){animation-delay:.7s}
+    .step-num { flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%;
+      background: var(--accent); color: white; font-size: 16px; font-weight: 900;
+      display: flex; align-items: center; justify-content: center; margin-top: 3px;
+      box-shadow: 0 4px 12px var(--accent-shadow); }
+    .step-body { flex: 1; min-width: 0; }
+    .step-body h2 { font-size: 1.12rem; font-weight: 800; color: var(--text); margin-bottom: 10px; line-height: 1.3; }
+    .step-body p { font-size: .94rem; line-height: 1.72; color: var(--muted); margin-bottom: 8px; }
+    .step-body ul,.step-body ol { padding-left: 20px; margin: 8px 0 12px; }
+    .step-body li { font-size: .94rem; line-height: 1.72; color: var(--muted); margin-bottom: 4px; }
+    .step-body b,.step-body strong { color: var(--text); font-weight: 700; }
+
+    /* Images */
+    .tuto-img { max-width: 100%; height: auto; border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(74,143,168,.14); margin: 14px 0; display: block;
+      transition: transform .3s ease, box-shadow .3s ease; }
+    .tuto-img:hover { transform: scale(1.015); box-shadow: 0 8px 32px rgba(74,143,168,.22); }
+
+    /* Substep */
+    .sub { background: var(--white); border-radius: 12px; padding: 18px 20px;
+      margin: 16px 0; border-left: 3px solid var(--accent); box-shadow: var(--shadow); }
+    .sub h3 { font-size: .98rem; font-weight: 800; margin-bottom: 8px; color: var(--text); }
+    .sub p,.sub li { font-size: .92rem; line-height: 1.65; color: var(--muted); }
+    .sub ul,.sub ol { padding-left: 18px; margin: 6px 0; }
+    .sub li { margin-bottom: 4px; }
+    .sub b,.sub strong { color: var(--text); font-weight: 700; }
+
+    /* Callouts */
+    .tip,.warn,.info { border-radius: 12px; padding: 14px 18px; margin: 18px 0;
+      font-size: .92rem; line-height: 1.65; font-weight: 600; }
+    .tip  { background: var(--green-pale); border-left: 3px solid var(--green); color: #2d5e30; }
+    .warn { background: var(--amber-pale); border-left: 3px solid var(--amber); color: #7a4000; }
+    .info { background: var(--blue-pale);  border-left: 3px solid var(--blue);  color: var(--blue-dark); }
+    .tip b,.warn b,.info b { color: inherit; }
+
+    /* Divider */
+    hr.div { border: none; height: 1px; background: var(--border); margin: 32px 0; }
+
+    /* Section header */
+    .section-h { font-size: 1.05rem; font-weight: 800; color: var(--text);
+      margin: 32px 0 16px; display: flex; align-items: center; gap: 8px; }
+
+    /* Footer */
+    footer { text-align: center; padding: 18px 24px; font-size: 13px; font-weight: 700;
+      color: var(--muted); border-top: 1px solid var(--border); background: var(--white);
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    footer a { color: var(--accent-dark); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 540px) {
+      .step { flex-direction: column; gap: 10px; }
+      .step-num { width: 32px; height: 32px; font-size: 14px; }
+      main { padding: 32px 16px 60px; }
+      footer { flex-direction: column; gap: 6px; }
+    }
+  </style>
+</head>
+<body class="green">
+
+  <nav class="topnav">
+    <a class="back" href="../index.html">← Retour aux guides</a>
+    <span class="brand">Apprendys</span>
+  </nav>
+
+  <header class="hero">
+    <span class="hero-icon">🎨</span>
+    <div class="hero-meta">
+      <span class="hero-tag">Parents</span>
+      <span class="hero-time">⏱ 4 min</span>
+    </div>
+    <h1>Rendre la lecture accessible avec LireCouleur</h1>
+    <p class="hero-sub">Transformer n'importe quel texte en document visuellement adapté à votre enfant, en 4 clics.</p>
+    <svg class="hero-wave" viewBox="0 0 1440 50" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,50 C280,15 560,45 720,30 C880,15 1160,44 1440,22 L1440,50 L0,50 Z" fill="#f2f7fb"/>
+    </svg>
+  </header>
+
+  <main>
+
+    <p class="intro-p">L'application <strong>Mes Leçons</strong> n'est pas qu'un simple traitement de texte. Elle intègre «&nbsp;LireCouleur&nbsp;», une boîte à outils conçue pour aider les enfants dyslexiques ou en apprentissage à déchiffrer n'importe quel texte sans s'épuiser. Voici comment transformer un texte difficile en document visuellement adapté à votre enfant, en 4 clics.</p>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h2>Le texte de départ</h2>
+        <p>Ouvrez l'application <strong>Mes Leçons</strong> et tapez (ou ouvrez) le texte que votre enfant doit lire (une leçon, un poème, un exercice). Au départ, c'est un texte noir et blanc classique.</p>
+        <img class="tuto-img" src="images/image5.png" alt="Texte noir et blanc classique ouvert dans l'application Mes Leçons">
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h2>Le bouton magique</h2>
+        <p>Regardez tout en haut de la fenêtre. Vous y trouverez un menu appelé <strong>LireCouleur</strong>.</p>
+        <img class="tuto-img" src="images/image1.png" alt="Barre de menu de l'application Mes Leçons avec le menu LireCouleur visible en haut">
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h2>Explorer le menu</h2>
+        <p>Cliquez sur «&nbsp;LireCouleur&nbsp;» pour ouvrir le menu déroulant. Ne vous laissez pas impressionner par le jargon technique (phonèmes, graphèmes…) !</p>
+        <p>Pour l'utiliser : <strong>sélectionnez tout votre texte avec la souris</strong>, puis cliquez sur l'aide visuelle dont votre enfant a besoin.</p>
+        <img class="tuto-img" src="images/image4.png" alt="Menu déroulant LireCouleur ouvert avec la liste des outils disponibles">
+        <div class="tip">
+          <b>💡 Astuce :</b> Si vous avez fait une erreur ou que vous voulez remettre le texte à zéro, cliquez simplement sur «&nbsp;Style Standard&nbsp;» !
+        </div>
+        <img class="tuto-img" src="images/image2.png" alt="Option Style Standard dans le menu LireCouleur pour réinitialiser la mise en forme">
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h2>Le résultat immédiat</h2>
+        <p>En un seul clic, le texte s'adapte instantanément au cerveau de votre enfant pour soulager sa fatigue visuelle.</p>
+        <img class="tuto-img" src="images/image3.png" alt="Texte transformé par LireCouleur avec des couleurs facilitant la lecture pour un enfant dyslexique">
+      </div>
+    </div>
+
+    <hr class="div">
+
+    <p class="section-h">📚 Les outils disponibles</p>
+
+    <div class="sub">
+      <ol>
+        <li><strong>Style standard</strong> : La base. L'outil utilise automatiquement une police adaptée et aère le texte pour une lecture plus reposante.</li>
+        <li><strong>Consonnes / voyelles</strong> : Sépare les lettres avec des couleurs différentes (souvent rouge et bleu), reprenant les codes classiques appris à l'école.</li>
+        <li><strong>Confusions lettres</strong> : Change la couleur des lettres qui se ressemblent (comme le b, d, p, q) pour éviter que le cerveau de l'enfant ne les inverse.</li>
+        <li><strong>Phonèmes</strong> : Donne une couleur spécifique à chaque son complexe (par exemple, le son «&nbsp;ou&nbsp;» ou «&nbsp;on&nbsp;») pour faciliter le déchiffrage.</li>
+        <li><strong>Phonèmes alternés</strong> : Alterne simplement deux couleurs à chaque nouveau son pour découper le mot sans transformer le texte en arc-en-ciel.</li>
+        <li><strong>Lettres muettes</strong> : Grise les lettres qu'on ne prononce pas (comme le «&nbsp;ent&nbsp;» des verbes) pour que l'enfant sache qu'il faut les ignorer à voix haute.</li>
+        <li><strong>Syllabes colorées et soulignées</strong> : Découpe visuellement chaque mot syllabe par syllabe pour rassurer l'enfant dans sa lecture pas à pas.</li>
+        <li><strong>Séparer les mots</strong> : Ajoute de l'espace supplémentaire entre chaque mot pour les enfants qui ont l'impression que le texte se mélange.</li>
+        <li><strong>Surligner les lignes</strong> : Ajoute un fond coloré une ligne sur deux — guide parfait pour éviter à l'œil de sauter des lignes.</li>
+      </ol>
+    </div>
+
+  </main>
+
+  <footer>
+    <a href="../index.html">← Retour aux guides</a>
+    <span>Apprendys — <strong>CF-Informatik974</strong></span>
+  </footer>
+
+</body>
+</html>
