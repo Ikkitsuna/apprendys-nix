@@ -38,7 +38,19 @@ Florent a testé l'ISO sur VM réelle : boot OK, Vosk/Piper OK. A signalé des b
 
 **Nuance honnête** : le « bug profil effacé au boot » n'a jamais été prouvé (le test ne seedait pas, à cause de l'échec bootloader host + set -e). Fix /var/lib gardé car meilleure archi.
 
-## ISO finale prête à flasher
+## Session 12 juin (après-midi) — test GUI AUTONOME en VM (ssh+xdotool) : 2 VRAIS bugs trouvés+fixés
+
+Test de l'installateur réel piloté à distance (VM `apprendys-sshtest`, ISO sshtest, screenshots virsh) :
+
+| Commit | Bug trouvé en conditions réelles |
+|---|---|
+| `0bd97bd` | **LE vrai « wipefs error »** : le log /tmp était créé en phase user PUIS root ne pouvait plus y écrire (`fs.protected_regular` NixOS) → le 1er `>>$LOG` échouait → étape wipefs déclarée morte alors que wipefs ne tournait même pas. C'était probablement ça le bug du 1er test de Florent (l'automount EBUSY était plausible mais jamais confirmé). Fix : log créé en phase root + `rm -f` préalable |
+| `2699be8` | **Course udev au montage** : `mount` sans `-t` juste après mkfs.ext4 → libblkid vue périmée → sondes FAT/ISOFS en dmesg → « superbloc erroné ». Le même mount marche 30 s après. Fix : `udevadm settle` + `-t ext4/vfat` explicite + 3 retries |
+
+Les 4 dialogues zenity validés visuellement en VM (warning → disque radiolist → prénom+profil combo Adulte → récapitulatif). Screenshots : `/var/tmp/apprendys-gui-test/`.
+⚠️ Les anciennes ISO (dont `ISO-INSTALLEUR-MVP.iso` du 11 juin) ont CES bugs → **rebuild obligatoire avant flash** (`nix build .#apprendys-installer-iso`).
+
+## ISO finale prête à flasher (⚠️ PÉRIMÉE — re-builder avec les fixes 0bd97bd+2699be8)
 
 `apprendys-nix/ISO-INSTALLEUR-MVP.iso` (4,0 Go) → `/nix/store/y3944yld...iso`. Inclut les 6 commits ci-dessus. C'est CETTE ISO pour le test GUI + prod.
 `sudo dd if=ISO-INSTALLEUR-MVP.iso of=/dev/sdX bs=4M status=progress oflag=sync`
