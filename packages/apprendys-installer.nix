@@ -34,7 +34,6 @@ writeShellApplication {
     # writeShellApplication injecte déjà : set -euo pipefail
 
     LOG=/tmp/apprendys-install.log
-    : > "$LOG" 2>/dev/null || true
 
     # ── Élévation : règle sudo NOPASSWD dédiée (modules/installer.nix) ──
     # On se ré-exécute via le chemin trouvé dans le PATH (symlink systemPackages
@@ -44,6 +43,12 @@ writeShellApplication {
       SELF="$(command -v apprendys-installer)"
       exec sudo -n --preserve-env=DISPLAY,XAUTHORITY "$SELF" "$@"
     fi
+
+    # Création du log UNIQUEMENT en phase root, avec rm -f préalable : un log
+    # résiduel appartenant à l'utilisateur rendrait toute écriture root impossible
+    # (fs.protected_regular en /tmp sticky) → fausses « étapes échouées ».
+    rm -f "$LOG"
+    : > "$LOG"
 
     export DISPLAY="''${DISPLAY:-:0}"
     # Repli si XAUTHORITY n'a pas survécu : cookie SDDM puis ~/.Xauthority
