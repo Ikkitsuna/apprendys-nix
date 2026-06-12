@@ -87,6 +87,22 @@
         ];
       };
 
+      # ISO de TEST — identique à l'installeur mais SANS release.nix (SSH activé via
+      # light.nix) pour piloter l'installateur en CI/autonome via ssh + xdotool.
+      # NE PAS livrer cette image (SSH ouvert, clé debug). Test uniquement.
+      apprendys-installer-iso-sshtest = nixos-generators.nixosGenerate {
+        inherit system;
+        format = "iso";
+        specialArgs = {
+          installedSystem =
+            self.nixosConfigurations.apprendys-installed.config.system.build.toplevel;
+        };
+        modules = commonModules ++ usbModules ++ [
+          ./profiles/light.nix
+          ./modules/installer.nix
+        ];
+      };
+
       # Alias par défaut (pour `nix build` sans cible)
       default = mkApprendysIso { profile = ./profiles/light.nix; };
     };
