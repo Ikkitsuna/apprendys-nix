@@ -97,6 +97,25 @@ in {
     ];
   };
 
+  # Prénom → nom complet du compte (GECOS) : le menu Whisker et SDDM affichent
+  # le GECOS s'il existe, sinon « apprendys ». L'installateur écrit le prénom
+  # dans /var/lib/apprendys/user-name ; on l'applique à chaque boot (oneshot,
+  # avant l'écran de connexion). Sans ce fichier (ISO live) : no-op.
+  systemd.services.apprendys-prenom = {
+    description = "Applique le prénom Apprendys au compte (GECOS)";
+    wantedBy = [ "multi-user.target" ];
+    before = [ "display-manager.service" ];
+    serviceConfig.Type = "oneshot";
+    script = ''
+      f=/var/lib/apprendys/user-name
+      [ -f "$f" ] || exit 0
+      # GECOS : pas de : ni , (séparateurs passwd), pas de contrôles, 32 max
+      prenom=$(tr -d '\000-\037:,' < "$f" | head -c 32)
+      [ -n "$prenom" ] || exit 0
+      ${pkgs.shadow}/bin/usermod -c "$prenom" apprendys || true
+    '';
+  };
+
   # Fonts DYS — priorité absolue
   fonts = {
     enableDefaultPackages = true;

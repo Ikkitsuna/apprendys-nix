@@ -154,9 +154,13 @@ writeShellApplication {
     # dans user-name plus bas.
     PRENOM_AFF="$(printf '%s' "$PRENOM" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')"
 
-    # Profil → icon-set (junior pour Enfant, adult pour Adulte). Défaut junior.
+    # Profil → icon-set (junior pour Enfant, teen pour Adulte). Défaut junior.
+    # NB : Adulte = set « teen » (icônes bleues) et non « adult » (noires) —
+    # le trait noir se fond dans le fond slate de l'ambiance adulte (retour
+    # Florent 12/06). teen → ambiance adulte dans session-init, même rendu
+    # sombre, icônes lisibles.
     case "$PROFIL" in
-      Adulte) ICON_SET="adult" ;;
+      Adulte) ICON_SET="teen" ;;
       *)      ICON_SET="junior" ;;
     esac
 
