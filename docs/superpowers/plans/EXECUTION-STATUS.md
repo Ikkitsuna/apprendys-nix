@@ -50,7 +50,17 @@ Test de l'installateur réel piloté à distance (VM `apprendys-sshtest`, ISO ss
 Les 4 dialogues zenity validés visuellement en VM (warning → disque radiolist → prénom+profil combo Adulte → récapitulatif). Screenshots : `/var/tmp/apprendys-gui-test/`.
 ⚠️ Les anciennes ISO (dont `ISO-INSTALLEUR-MVP.iso` du 11 juin) ont CES bugs → **rebuild obligatoire avant flash** (`nix build .#apprendys-installer-iso`).
 
-## ISO finale prête à flasher (⚠️ PÉRIMÉE — re-builder avec les fixes 0bd97bd+2699be8)
+## Session 12 juin (fin d'aprèm) — Task 13 : « Mon Apprendys » porté + styles par look
+
+Commits `1d4ae92` (prénom GECOS + teen pour Adulte) puis `be64e00` + `0a4...` :
+- **App V1 portée** (packages/apprendys-app[.nix]) : cartes de style, police Luciole/OpenDyslexic + tailles, curseur, espace parent PIN (changelog, bouton OTA via polkit, vitesse TTS réelle via piper --length_scale), guides V1 embarqués (12 Mo).
+- **Styles nommés par LOOK, pas par âge** (décision Florent) : Mignon (junior) / Classique (teen) / Monochrome (adult, icônes inversées en blanc). Installateur : combo 3 styles.
+- Changement de style via l'app → session-init relancé → ambiance complète suit.
+- font-style/font-size de l'app PRIMENT sur l'ambiance au login (session-init).
+- **Validé en VM live (apprendys-sshtest3)** : app lancée, Monochrome appliqué en direct (fond+thème+icônes blanches+panel), retour Classique OK. Screenshots /var/tmp/apprendys-gui-test/6x-*.png.
+- ⚠️ À surveiller au test humain : l'app ne se ferme pas toujours seule après « Changements appliqués ! » (à confirmer, peut-être artefact xdotool).
+
+## ISO finale prête à flasher (⚠️ PÉRIMÉE — re-builder avec les fixes 0bd97bd+2699be8 + Task 13)
 
 `apprendys-nix/ISO-INSTALLEUR-MVP.iso` (4,0 Go) → `/nix/store/y3944yld...iso`. Inclut les 6 commits ci-dessus. C'est CETTE ISO pour le test GUI + prod.
 `sudo dd if=ISO-INSTALLEUR-MVP.iso of=/dev/sdX bs=4M status=progress oflag=sync`
