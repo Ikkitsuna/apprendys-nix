@@ -49,6 +49,17 @@ writeShellApplication {
     ICON_BASE="$HOME/.local/share/icons/apprendys"
     mkdir -p "$CONFIG_DIR"
 
+    # ── 0a. Seed du profil/prénom depuis /var/lib/apprendys (posé par l'installateur) ──
+    # L'installateur ne peut PAS écrire dans le home avant le 1er boot (effacé par
+    # l'activation home-manager). Il écrit donc dans /var/lib/apprendys (persistant),
+    # et on copie ici vers le home au 1er login SI absent (ensuite l'app profil gère).
+    if [ ! -f "$CONFIG_DIR/icon-set" ] && [ -f /var/lib/apprendys/profile ]; then
+      cp /var/lib/apprendys/profile "$CONFIG_DIR/icon-set" 2>/dev/null || true
+    fi
+    if [ ! -f "$CONFIG_DIR/user-name" ] && [ -f /var/lib/apprendys/user-name ]; then
+      cp /var/lib/apprendys/user-name "$CONFIG_DIR/user-name" 2>/dev/null || true
+    fi
+
     # ── 0. Préchargement Vosk en arrière-plan (dictée instantanée au 1er appel) ──
     # V1 terrain : sans preload, le 1er Ctrl+Maj+Espace attend ~2 min (cold start
     # du modèle ~50 Mo sur vieux PC). On charge le modèle au login, en silence.

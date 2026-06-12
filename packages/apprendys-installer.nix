@@ -274,11 +274,15 @@ writeShellApplication {
 
       echo "90" ; echo "# Personnalisation..."
       log_step "Écriture du prénom et du profil"
-      mkdir -p /mnt/home/apprendys/.config/apprendys >>"$LOG" 2>&1 || return 1
-      printf '%s\n' "$PRENOM"   > /mnt/home/apprendys/.config/apprendys/user-name || return 1
-      printf '%s\n' "$ICON_SET" > /mnt/home/apprendys/.config/apprendys/icon-set || return 1
-      # uid 1000 (apprendys) : gid 100 (users) sur NixOS.
-      chown -R 1000:100 /mnt/home/apprendys >>"$LOG" 2>&1 || return 1
+      # IMPORTANT : on écrit dans /var/lib/apprendys (persistant, NON géré par
+      # home-manager). Écrire dans le home avant le 1er boot ne survit PAS à
+      # l'activation home-manager — les fichiers seraient effacés au démarrage.
+      # session-init seed ~/.config/apprendys/ depuis ici au 1er login.
+      mkdir -p /mnt/var/lib/apprendys >>"$LOG" 2>&1 || return 1
+      printf '%s\n' "$PRENOM"   > /mnt/var/lib/apprendys/user-name || return 1
+      printf '%s\n' "$ICON_SET" > /mnt/var/lib/apprendys/profile   || return 1
+      chmod 755 /mnt/var/lib/apprendys >>"$LOG" 2>&1 || true
+      chmod 644 /mnt/var/lib/apprendys/user-name /mnt/var/lib/apprendys/profile >>"$LOG" 2>&1 || true
 
       echo "96" ; echo "# Finalisation..."
       log_step "Démontage"
