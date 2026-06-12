@@ -131,7 +131,7 @@ writeShellApplication {
     FORM="$(zenity --forms --width=460 \
       --title="Personnaliser Apprendys" \
       --text="Encore deux informations :" \
-      --add-entry="Prénom de l'enfant" \
+      --add-entry="Prénom" \
       --add-combo="Profil" --combo-values="Enfant|Adulte" \
       2>/dev/null)" || exit 0
 
@@ -183,6 +183,15 @@ writeShellApplication {
       umount -R /mnt >>"$LOG" 2>&1 || true
 
       echo "2" ; echo "# Préparation du disque..."
+      # Piège classique : le bureau live (automount udisks/thunar) peut avoir monté
+      # des partitions du disque cible — surtout à la 2e tentative après un essai
+      # qui a déjà créé des partitions. wipefs/sgdisk échouent alors avec EBUSY.
+      # On libère le disque cible d'abord : démontage forcé + swapoff de CHAQUE partition.
+      log_step "Libération du disque cible (démontage des partitions)"
+      for _part in $(lsblk -lnro NAME "$TARGET" 2>/dev/null | tail -n +2); do
+        umount -f "/dev/$_part" >>"$LOG" 2>&1 || umount -l "/dev/$_part" >>"$LOG" 2>&1 || true
+        swapoff "/dev/$_part" >>"$LOG" 2>&1 || true
+      done
       log_step "Effacement des signatures (wipefs)"
       wipefs -af "$TARGET" >>"$LOG" 2>&1 || return 1
       log_step "Effacement de la table de partitions (sgdisk -Z)"
