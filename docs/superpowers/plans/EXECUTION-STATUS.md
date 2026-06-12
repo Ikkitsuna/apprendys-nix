@@ -19,9 +19,32 @@
 | 11 OTA (code) | 2202d22 | timer weekly Persistent, garde CMOS, ordonnancement réseau. Review ✅ |
 | 12 Durcissement (code) | 4432689 | release.nix : SSH off, clé debug retirée, wheel retiré, sudo gardé pour l'installateur. Review ✅ |
 
-## En cours
+## Session 12 juin (après 1er test VM de Florent) — bugs + thèmes + trous V1
 
-- **Build ISO finale** (intègre OTA + durcissement) en arrière-plan : PID 11001, log `/tmp/apprendys-iso-final.log`. C'est CETTE ISO qu'on flashe pour le test/prod.
+Florent a testé l'ISO sur VM réelle : boot OK, Vosk/Piper OK. A signalé des bugs + voulu cibler tous les âges. Traité :
+
+| Commit | Quoi |
+|---|---|
+| `7b557e8` | **Bug install bloquant** : wipefs EBUSY (automount disque cible) → démontage forcé + swapoff avant wipefs. + label « Prénom » neutre (profil Adulte demandait prénom d'enfant) |
+| `e398394` | **Profil = thème complet** : junior=enfant (Greybird clair, nuages, 72px, Luciole 13) ; adult/teen=adulte (Greybird-dark, Papirus-Dark, slate, 48px, Luciole 11). session-init applique l'ambiance selon `icon-set` |
+| `bb2c51e` | **Sécurité du travail** : autosave LibreOffice + Xournal → ~/Devoirs/autosave (seed-si-absent), dossiers Devoirs créés, bookmark GTK « Mes Devoirs ». + **timezone Indian/Reunion** |
+| `a5c3859` | **Préchargement Vosk** au login (fini le cold start ~2 min) |
+| `56dcb31` | **Profil+prénom via /var/lib/apprendys** (l'installateur écrit là, session-init seed le home au 1er login — robuste vs home-manager) |
+| `e103000` | Preuves de boot : `apprendys-installed-boot-proof.png` (enfant) + `apprendys-adulte-boot-proof.png` (adulte slate) |
+
+**Validé en image (install→boot direct kernel QEMU)** : profil adulte → Greybird-dark + Papirus-Dark + 48px + slate, vérifié dans le xfconf réel ET à l'écran.
+
+**Analyse V1/V2 (ZERO-TO-HERO lu)** : gnuramage/P4/P5/persistence = parqués pour le Produit 2 nomade (modules dans le repo, non câblés). Trous restants : onboarding (zappé pour MVP), **app réglages parent** (gros, post-MVP — d'autant plus utile maintenant que profil=thème). Accès Devoirs depuis ailleurs → futur argument **Apprendys+ cloud** (au lieu de partition NTFS).
+
+**Nuance honnête** : le « bug profil effacé au boot » n'a jamais été prouvé (le test ne seedait pas, à cause de l'échec bootloader host + set -e). Fix /var/lib gardé car meilleure archi.
+
+## ISO finale prête à flasher
+
+`apprendys-nix/ISO-INSTALLEUR-MVP.iso` (4,0 Go) → `/nix/store/y3944yld...iso`. Inclut les 6 commits ci-dessus. C'est CETTE ISO pour le test GUI + prod.
+`sudo dd if=ISO-INSTALLEUR-MVP.iso of=/dev/sdX bs=4M status=progress oflag=sync`
+
+## Rappel artefact host (pour mes tests, PAS un bug produit)
+`nixos-install` depuis Arch échoue à l'étape bootloader (`mount: commande introuvable` dans le chroot) → contourné par boot direct kernel QEMU. Sur la vraie ISO NixOS, l'install bootloader marche.
 
 ## VALIDATION NUIT 11→12 juin — mécanisme d'install + boot PROUVÉ (sans GUI)
 
