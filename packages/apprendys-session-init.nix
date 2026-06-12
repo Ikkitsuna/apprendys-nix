@@ -113,8 +113,8 @@ writeShellApplication {
     # Choix utilisateur via Mon Apprendys (font-style/font-size) : il PRIME
     # sur la police par défaut de l'ambiance — sinon chaque login écraserait
     # le réglage de la personne.
-    USER_FONT_STYLE=$(tr -cd 'a-z' < "$CONFIG_DIR/font-style" 2>/dev/null || true)
-    USER_FONT_SIZE=$(tr -cd '0-9' < "$CONFIG_DIR/font-size" 2>/dev/null || true)
+    USER_FONT_STYLE=$(tr -cd '[:lower:]' < "$CONFIG_DIR/font-style" 2>/dev/null || true)
+    USER_FONT_SIZE=$(tr -cd '[:digit:]' < "$CONFIG_DIR/font-size" 2>/dev/null || true)
     if [ -n "$USER_FONT_STYLE" ] && [ -n "$USER_FONT_SIZE" ]; then
       case "$USER_FONT_STYLE" in
         opendyslexic) UI_FONT="OpenDyslexic $USER_FONT_SIZE" ;;
