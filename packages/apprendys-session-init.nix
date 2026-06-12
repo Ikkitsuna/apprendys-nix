@@ -175,6 +175,35 @@ writeShellApplication {
     sleep 1
     xfdesktop &
 
+    # ── 8. LibreOffice — autosave vers ~/Devoirs/autosave (seed si absent) ──────
+    # On ne touche au fichier QUE s'il n'existe pas encore, pour ne pas écraser
+    # la config de l'utilisateur lors des démarrages suivants.
+    LO_XCU="$HOME/.config/libreoffice/4/user/registrymodifications.xcu"
+    if [ ! -f "$LO_XCU" ]; then
+      mkdir -p "$HOME/.config/libreoffice/4/user"
+      cat > "$LO_XCU" << 'LOXCUEOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<oor:items xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+ <item oor:path="/org.openoffice.Office.Recovery/AutoSave"><prop oor:name="Enabled" oor:op="fuse"><value>true</value></prop></item>
+ <item oor:path="/org.openoffice.Office.Recovery/AutoSave"><prop oor:name="TimeIntervall" oor:op="fuse"><value>3</value></prop></item>
+ <item oor:path="/org.openoffice.Office.Recovery/AutoSave"><prop oor:name="UserAutoSave" oor:op="fuse"><value>true</value></prop></item>
+</oor:items>
+LOXCUEOF
+    fi
+
+    # ── 9. Xournal++ — autosave vers ~/Devoirs/autosave (seed si absent) ────────
+    XOPP_CFG="$HOME/.config/xournalpp/settings.xml"
+    if [ ! -f "$XOPP_CFG" ]; then
+      mkdir -p "$HOME/.config/xournalpp"
+      cat > "$XOPP_CFG" << 'XOPPCFGEOF'
+<settings>
+  <property name="autosaveEnabled" value="true"/>
+  <property name="autosaveTimeout" value="3"/>
+  <property name="autosavePath" value="/home/apprendys/Devoirs/autosave"/>
+</settings>
+XOPPCFGEOF
+    fi
+
     exit 0
   '';
 }

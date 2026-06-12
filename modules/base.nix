@@ -6,7 +6,8 @@ in {
   # Locale France — defaultLocale ne suffit PAS en mode ISO live :
   # certaines apps (Firefox, LibreOffice, GTK) lisent LC_MESSAGES directement,
   # pas LANG. Il faut forcer chaque LC_* explicitement.
-  time.timeZone = "Europe/Paris";
+  # Réunion par défaut (vente directe locale) ; NTP corrige le RTC au 1er WiFi. À rendre configurable à l'install quand la métropole scale.
+  time.timeZone = "Indian/Reunion";
   i18n.defaultLocale = "fr_FR.UTF-8";
   i18n.supportedLocales = [
     "fr_FR.UTF-8/UTF-8"

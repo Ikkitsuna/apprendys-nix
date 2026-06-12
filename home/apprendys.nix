@@ -522,6 +522,22 @@ XMLEOF
     };
   };
 
+  # ── Dossiers Devoirs (garantit l'existence à chaque activation) ─────────────
+  # xdg.userDirs crée les XDG dirs (Devoirs, Images, Videos, Musique) mais pas autosave.
+  # On crée tout explicitement pour être certain, y compris si xdg-user-dirs est absent.
+  home.activation.apprendysDevoirs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    run mkdir -p "$HOME/Devoirs/autosave" "$HOME/Devoirs/Images" "$HOME/Devoirs/Videos" "$HOME/Devoirs/Musique"
+  '';
+
+  # ── Marque-page GTK3 "Mes Devoirs" dans toutes les boîtes de dialogue ───────
+  # Apparaît dans la colonne gauche des dialogues Ouvrir/Enregistrer (LibreOffice, Xournal++…)
+  home.file.".config/gtk-3.0/bookmarks" = {
+    force = true;  # écraser au cas où xfce / un autre outil l'aurait créé
+    text = ''
+      file:///home/apprendys/Devoirs Mes Devoirs
+    '';
+  };
+
   # ── Bash ─────────────────────────────────────────────────────────────────────
   programs.bash = {
     enable = true;
