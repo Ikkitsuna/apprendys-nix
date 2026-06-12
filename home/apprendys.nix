@@ -8,6 +8,10 @@
   home.file.".local/share/backgrounds/apprendys-wallpaper.png".source =
     ../assets/wallpaper/apprendys-wallpaper.png;
 
+  # Wallpaper ambiance adulte (profils teen/adult)
+  home.file.".local/share/backgrounds/apprendys-wallpaper-adulte.png".source =
+    ../assets/wallpaper/apprendys-wallpaper-adulte.png;
+
   # ── Icône menu Whisker ──────────────────────────────────────────────────────
   home.file.".local/share/icons/apprendys-menu.png".source =
     ../assets/icons/apprendys-menu.png;

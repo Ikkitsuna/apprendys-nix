@@ -64,6 +64,10 @@ in {
     xclip
     libnotify
 
+    # Thèmes GTK/icônes — disponibles via XDG_DATA_DIRS pour xfsettingsd
+    greybird              # Greybird + Greybird-dark (ambiance enfant et adulte)
+    papirus-icon-theme    # Papirus-Dark (ambiance adulte)
+
     # Divers
     wget curl
   ];

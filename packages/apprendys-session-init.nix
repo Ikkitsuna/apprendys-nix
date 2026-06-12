@@ -55,6 +55,34 @@ writeShellApplication {
       cp -f --no-preserve=mode "$ICON_BASE/$SET"/*.png "$ICON_BASE/" 2>/dev/null || true
     fi
 
+    # ── 1b. Ambiance selon le profil ──────────────────────────────────────────
+    # junior = enfant (clair, Greybird, grandes icônes, Luciole 13)
+    # teen / adult = adulte (sombre, Greybird-dark, Papirus-Dark, Luciole 11)
+    case "$SET" in
+      adult|teen) AMBIANCE="adulte" ;;
+      *)          AMBIANCE="enfant" ;;
+    esac
+
+    if [ "$AMBIANCE" = "adulte" ]; then
+      WALLPAPER_FILE="apprendys-wallpaper-adulte.png"
+      GTK_THEME="Greybird-dark"
+      ICON_THEME="Papirus-Dark"
+      DESKTOP_ICON_SIZE=48
+      UI_FONT="Luciole 11"
+    else
+      WALLPAPER_FILE="apprendys-wallpaper.png"
+      GTK_THEME="Greybird"
+      ICON_THEME="elementary-xfce"
+      DESKTOP_ICON_SIZE=72
+      UI_FONT="Luciole 13"
+    fi
+
+    # Appliquer thème GTK + icônes + police + bordures fenêtres
+    xfconf-query -c xsettings -p /Net/ThemeName     -s "$GTK_THEME"  --create -t string 2>/dev/null || true
+    xfconf-query -c xsettings -p /Net/IconThemeName  -s "$ICON_THEME" --create -t string 2>/dev/null || true
+    xfconf-query -c xsettings -p /Gtk/FontName       -s "$UI_FONT"    --create -t string 2>/dev/null || true
+    xfconf-query -c xfwm4     -p /general/theme      -s "$GTK_THEME"  --create -t string 2>/dev/null || true
+
     # ── 2. LireCouleur (une fois par user — flag sentinel) ──────────────────────
     # --suppress-license : évite l'invite interactive de licence (CC-BY acceptée par l'admin)
     if [ ! -f "$CONFIG_DIR/lirecouleur_installed" ]; then
@@ -96,7 +124,7 @@ writeShellApplication {
     done
 
     # ── 5. Wallpaper dynamique — détecte le vrai nom du moniteur ───────────────
-    WALLPAPER="$HOME/.local/share/backgrounds/apprendys-wallpaper.png"
+    WALLPAPER="$HOME/.local/share/backgrounds/$WALLPAPER_FILE"
     if [ -f "$WALLPAPER" ]; then
       while IFS= read -r monitor; do
         for ws in 0 1 2 3; do
@@ -131,7 +159,7 @@ writeShellApplication {
 
     # ── 7. Icônes bureau xfce4-desktop ─────────────────────────────────────────
     xfconf-query -c xfce4-desktop -p /desktop-icons/style              -t int  -s 2     --create 2>/dev/null || true
-    xfconf-query -c xfce4-desktop -p /desktop-icons/icon-size          -t uint -s 72    --create 2>/dev/null || true
+    xfconf-query -c xfce4-desktop -p /desktop-icons/icon-size          -t uint -s "$DESKTOP_ICON_SIZE" --create 2>/dev/null || true
     xfconf-query -c xfce4-desktop -p /desktop-icons/file-icons/show-home       -t bool -s false --create 2>/dev/null || true
     xfconf-query -c xfce4-desktop -p /desktop-icons/file-icons/show-trash      -t bool -s false --create 2>/dev/null || true
     xfconf-query -c xfce4-desktop -p /desktop-icons/file-icons/show-filesystem -t bool -s false --create 2>/dev/null || true
