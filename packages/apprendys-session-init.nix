@@ -7,7 +7,15 @@
 , xrandr          # xorg.xrandr — injecté par apps.nix
 , glib             # gio
 , procps           # pkill
+, python3          # préchargement modèle Vosk
+, vosk             # injecté par apps.nix
+, vosk-model-fr-small  # injecté par apps.nix
 }:
+
+let
+  # Python avec Vosk pour précharger le modèle STT au login (dictée instantanée)
+  pythonVosk = python3.withPackages (ps: [ vosk ]);
+in
 
 # Apprendys session-init — lancé à chaque ouverture de session XFCE (autostart).
 # Port du V1 patches/usr/local/bin/apprendys-session-init.sh + améliorations NixOS :
@@ -31,6 +39,7 @@ writeShellApplication {
     glib               # gio
     procps             # pkill
     xrandr             # xrandr (xorg.xrandr)
+    pythonVosk         # préchargement modèle STT au login
     # xfconf-query, xfce4-panel, xfdesktop : fournis par la session XFCE en cours
   ];
   text = ''
@@ -39,6 +48,19 @@ writeShellApplication {
     CONFIG_DIR="$HOME/.config/apprendys"
     ICON_BASE="$HOME/.local/share/icons/apprendys"
     mkdir -p "$CONFIG_DIR"
+
+    # ── 0. Préchargement Vosk en arrière-plan (dictée instantanée au 1er appel) ──
+    # V1 terrain : sans preload, le 1er Ctrl+Maj+Espace attend ~2 min (cold start
+    # du modèle ~50 Mo sur vieux PC). On charge le modèle au login, en silence.
+    # P4 prioritaire (clé nomade), sinon modèle baked du store.
+    (
+      P4_STT="/mnt/apprendys/models/stt"
+      STT_MODEL="${vosk-model-fr-small}/share/vosk-models/fr-small"
+      if [ -d "$P4_STT" ] && [ -n "$(ls -A "$P4_STT" 2>/dev/null)" ] && ! ls "$P4_STT"/*.bin >/dev/null 2>&1; then
+        STT_MODEL="$P4_STT"
+      fi
+      python3 -c "from vosk import Model; Model('$STT_MODEL')" >/dev/null 2>&1
+    ) &
 
     # ── 1. Set d'icônes actif (junior | teen | adult) ──────────────────────────
     # tr -cd 'a-zA-Z' : supprime espaces, newlines, caractères invalides

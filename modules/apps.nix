@@ -11,7 +11,7 @@ let
     inherit vosk vosk-model-fr-small;
   };
   apprendys-session-init = pkgs.callPackage ../packages/apprendys-session-init.nix {
-    inherit lirecouleur;
+    inherit lirecouleur vosk vosk-model-fr-small;
     xrandr = pkgs.xorg.xrandr;
   };
 in {
