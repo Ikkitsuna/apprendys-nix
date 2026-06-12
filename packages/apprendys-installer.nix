@@ -250,12 +250,30 @@ writeShellApplication {
       mkfs.ext4 -F -L APPRENDYS "$ROOT" >>"$LOG" 2>&1 || return 1
 
       echo "28" ; echo "# Montage..."
+      # Juste après mkfs, udev re-sonde encore les partitions : sans settle,
+      # mount voit une vue périmée et échoue (« superbloc erroné » reproduit
+      # en VM). Type explicite + 3 tentatives = montage déterministe.
+      log_step "Synchronisation udev (settle)"
+      udevadm settle >>"$LOG" 2>&1 || true
       log_step "Montage de la racine sur /mnt"
       umount -R /mnt >>"$LOG" 2>&1 || true
-      mount "$ROOT" /mnt >>"$LOG" 2>&1 || return 1
+      mkdir -p /mnt >>"$LOG" 2>&1 || true
+      local MNT_OK=0 _try
+      for _try in 1 2 3; do
+        if mount -t ext4 "$ROOT" /mnt >>"$LOG" 2>&1; then MNT_OK=1; break; fi
+        sleep 2
+        udevadm settle >>"$LOG" 2>&1 || true
+      done
+      [ "$MNT_OK" = 1 ] || return 1
       mkdir -p /mnt/boot >>"$LOG" 2>&1 || return 1
       log_step "Montage de /mnt/boot"
-      mount "$ESP" /mnt/boot >>"$LOG" 2>&1 || return 1
+      MNT_OK=0
+      for _try in 1 2 3; do
+        if mount -t vfat "$ESP" /mnt/boot >>"$LOG" 2>&1; then MNT_OK=1; break; fi
+        sleep 2
+        udevadm settle >>"$LOG" 2>&1 || true
+      done
+      [ "$MNT_OK" = 1 ] || return 1
 
       echo "35" ; echo "# Installation du système (long, ~15 min)..."
       log_step "Installation NixOS (nixos-install, offline)"
