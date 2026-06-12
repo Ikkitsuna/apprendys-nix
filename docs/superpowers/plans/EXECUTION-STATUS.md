@@ -1,7 +1,13 @@
-# État d'exécution MVP — 2026-06-11
+# État d'exécution MVP — 2026-06-12 (fin de session 96 %)
 
 > Reprise : suivre ce fichier + le plan `2026-06-11-mvp-apprendys-installed.md`.
-> Branche : `mvp-installed`. HEAD : `4432689`.
+> Branche : `mvp-installed`. HEAD : `f2e6641` (+ fix dialog 10x10 à faire, voir Task 13).
+
+## REPRISE IMMÉDIATE (prochaine session)
+1. **Fixer le dialogue 10x10** de Mon Apprendys (voir bug confirmé section Task 13) — 15 min.
+2. **Feu vert Florent** → builder l'ISO PROD : `nix build .#apprendys-installer-iso -L` (~20 min).
+3. VMs de preuve qui tournent : sshtest/sshtest2 (systèmes installés Camille/adulte), sshtest3 (live, app testée, IP 192.168.122.45). Disposables.
+4. Florent veut peut-être peaufiner les visuels des styles avant la prod — lui demander.
 
 ## CODE TERMINÉ — Tasks 1-9, 11, 12 (commits 91004e2 → 4432689)
 
@@ -58,7 +64,7 @@ Commits `1d4ae92` (prénom GECOS + teen pour Adulte) puis `be64e00` + `0a4...` :
 - Changement de style via l'app → session-init relancé → ambiance complète suit.
 - font-style/font-size de l'app PRIMENT sur l'ambiance au login (session-init).
 - **Validé en VM live (apprendys-sshtest3)** : app lancée, Monochrome appliqué en direct (fond+thème+icônes blanches+panel), retour Classique OK. Screenshots /var/tmp/apprendys-gui-test/6x-*.png.
-- ⚠️ À surveiller au test humain : l'app ne se ferme pas toujours seule après « Changements appliqués ! » (à confirmer, peut-être artefact xdotool).
+- ⚠️ **BUG CONFIRMÉ (mineur, diagnostiqué à 90 %)** : après « Appliquer », le dialogue « Changements appliqués ! » s'affiche en **10x10 px** à (10,10) → invisible → l'app semble ne jamais se fermer (elle attend l'OK). Cause probable : la MessageDialog est mappée pendant le pkill/restart de xfdesktop dans apply_profile. **Fix suggéré** : dans `_on_apply_all`, montrer le dialogue AVANT apply_profile, ou différer apply_profile via GLib.idle_add après d.destroy(), ou simplement supprimer le dialogue (l'effet est visible à l'écran, l'app peut quitter directement). Fichier : packages/apprendys-app/apprendys-app.py, `_on_apply_all` + `apply_profile`.
 
 ## ISO finale prête à flasher (⚠️ PÉRIMÉE — re-builder avec les fixes 0bd97bd+2699be8 + Task 13)
 
