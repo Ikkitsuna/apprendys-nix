@@ -1,7 +1,28 @@
 # État d'exécution MVP — 2026-06-16 (reprise après 4 jours)
 
-> Reprise : suivre ce fichier + le plan `2026-06-11-mvp-apprendys-installed.md`.
-> Branche : `mvp-installed`. Décision Florent : repo **PUBLIC** (OTA simple).
+> Reprise : suivre ce fichier. Branche par défaut : **`main`** (renommée depuis mvp-installed).
+> **Repo PUBLIC en ligne : https://github.com/Ikkitsuna/apprendys-nix** (OTA pinne `?ref=main`).
+
+## ✅ SESSION 16 JUIN — TOUT VERT
+- **3 bugs « Mon Apprendys » corrigés ET vérifiés en VM live** (freeze / prénom-Whisker / mot-de-passe-MAJ — détails plus bas). Prénom « Lucas » confirmé dans Whisker, style Monochrome appliqué sans gel, bouton MAJ masqué en live.
+- **Bouton MAJ validé sur système INSTALLÉ par construction** : `apprendys-ota.service` présent (→ bouton affiché) + règle polkit `apprendys-ota` présente et correcte (→ pas de mot de passe). Mécanisme polkit identique prouvé live (prénom). SSH off sur l'installé = durcissement OK.
+- **Task 10 (install bout-en-bout UEFI) bouclée** : ISO → install 3 clics → boot disque → thème Classique + prénom seedé. (Reste legacy BIOS, hardware.)
+- **Task 11 (GitHub) bouclée** : repo public `main`, 37 commits, README, hash dev-vm retiré, OTA `?ref=main` (résout vérifié). 
+- **Contexte perso** : Florent migre probablement Arch→Fedora (cf [[florent-migration-fedora]] en mémoire). Backup complet fait dans `~/Save avant Fédora` (18G). Pas compromis par l'attaque AUR.
+
+## RESTE (à froid, post-migration éventuelle)
+- Test legacy BIOS (SeaBIOS) en plus de l'UEFI.
+- Build ISO PROD finale `nix build .#apprendys-installer-iso` quand prêt à flasher.
+- Test matériel réel (Blackview, micro Vosk).
+- Pousser les AUTRES repos perso sur remotes (ils étaient tous local-only).
+
+## SESSION 16 JUIN — détail des 3 bugs « Mon Apprendys » (captures 12/06) + corrigés
+Cap dossier `~/Images/Copies d'écran/` (12 juin). Root-cause + fix (commits 9ff2ee8 → push public) :
+1. **FREEZE sur Appliquer (critique)** : `subprocess.run(xfce4-panel --restart, capture_output=True)` SANS timeout → le panel relancé hérite du tuyau stdout, ne le ferme jamais → gel infini sur le thread GTK. + session-init (qui backgroundise un restart panel) capturé → gel 60 s. Fix : helpers `_spawn`/`_run` en DEVNULL, suppression du restart redondant, apply dans un thread.
+2. **Prénom absent du menu Whisker** : `set_whisker_title` écrivait `button-title` (label bouton, caché) au lieu du GECOS que Whisker affiche. Fix : `apprendys-prenom.service` lit aussi `~/.config/apprendys/user-name`, déclenchable à chaud par l'app via règle polkit (base.nix).
+3. **Mot de passe à la MAJ** : bouton lance `apprendys-ota.service`, règle polkit installée seulement (pas sur ISO live). Fix : bouton masqué si service absent (`ota_available()`).
+
+## (archive) À VÉRIFIER en VM — FAIT ✅
 
 ## SESSION 16 JUIN — 3 bugs « Mon Apprendys » trouvés par Florent (captures 12/06) + corrigés
 Cap dossier `~/Images/Copies d'écran/` (12 juin). Root-cause + fix (commit après f2e6641) :
