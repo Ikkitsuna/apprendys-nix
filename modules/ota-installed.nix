@@ -17,7 +17,7 @@
       [ "$(date +%Y)" -ge 2026 ] || exit 0
 
       nixos-rebuild switch \
-        --flake github:Ikkitsuna/apprendys-nix#apprendys-installed \
+        --flake github:Ikkitsuna/apprendys-nix?ref=main#apprendys-installed \
         --refresh \
         || echo "apprendys-ota: échec (réseau ?) — prochaine tentative au timer"
     '';

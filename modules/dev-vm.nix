@@ -31,7 +31,9 @@
   users.users.florent = {
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" "audio" "video" ];
-    hashedPassword = "$6$crjaOeenOX1WFwZk$UcX/YkjV6qAJ2Cz4caE/pvCU9TQr6ktAKV10QBG3x.kq/9z.7x52c/ncspA8LO5bXZZNmTe0fKd5XthdPdhMp1";
+    # VM de dev jetable — mot de passe non sensible (repo public). Change-le
+    # au 1er login si tu exposes cette VM hors localhost.
+    initialPassword = "apprendys";
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINTm9zyJh4iYkeiNEIiUx7v/twH0e8IyTpz9DjwQRzCs florent@ArchWork"
     ];
