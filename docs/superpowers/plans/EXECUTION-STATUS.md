@@ -1,13 +1,23 @@
-# État d'exécution MVP — 2026-06-12 (fin de session 96 %)
+# État d'exécution MVP — 2026-06-16 (reprise après 4 jours)
 
 > Reprise : suivre ce fichier + le plan `2026-06-11-mvp-apprendys-installed.md`.
-> Branche : `mvp-installed`. HEAD : `f2e6641` (+ fix dialog 10x10 à faire, voir Task 13).
+> Branche : `mvp-installed`. Décision Florent : repo **PUBLIC** (OTA simple).
 
-## REPRISE IMMÉDIATE (prochaine session)
-1. **Fixer le dialogue 10x10** de Mon Apprendys (voir bug confirmé section Task 13) — 15 min.
-2. **Feu vert Florent** → builder l'ISO PROD : `nix build .#apprendys-installer-iso -L` (~20 min).
-3. VMs de preuve qui tournent : sshtest/sshtest2 (systèmes installés Camille/adulte), sshtest3 (live, app testée, IP 192.168.122.45). Disposables.
-4. Florent veut peut-être peaufiner les visuels des styles avant la prod — lui demander.
+## SESSION 16 JUIN — 3 bugs « Mon Apprendys » trouvés par Florent (captures 12/06) + corrigés
+Cap dossier `~/Images/Copies d'écran/` (12 juin). Root-cause + fix (commit après f2e6641) :
+1. **FREEZE sur Appliquer (critique)** : `subprocess.run(xfce4-panel --restart, capture_output=True)` SANS timeout → le panel relancé hérite du tuyau stdout, ne le ferme jamais → gel infini sur le thread GTK. + session-init (qui backgroundise un restart panel) capturé → gel 60 s. Fix : helpers `_spawn`/`_run` en DEVNULL, suppression du restart redondant, apply dans un thread.
+2. **Prénom absent du menu Whisker** : `set_whisker_title` écrivait `button-title` (label bouton, caché) au lieu du GECOS que Whisker affiche. Fix : `apprendys-prenom.service` lit aussi `~/.config/apprendys/user-name`, déclenchable à chaud par l'app via règle polkit (base.nix).
+3. **Mot de passe à la MAJ** : bouton lance `apprendys-ota.service`, règle polkit installée seulement (pas sur ISO live). Fix : bouton masqué si service absent (`ota_available()`).
+
+**À VÉRIFIER en VM** (ISO sshtest en build, `/var/tmp/apprendys-sshtest-iso4`) :
+- Live : style sans freeze, prénom→Whisker, bouton MAJ masqué.
+- Installé (vraie install) : bouton MAJ présent + marche sans mot de passe (= valide aussi la règle polkit OTA, jamais testée sur installé).
+
+## TÂCHE EN COURS : GitHub + OTA (Task 11) — EN PAUSE le temps des fixes
+- Décision : repo **PUBLIC**. `gh` installé mais PAS loggué → Florent doit `gh auth login`.
+- Avant push : nettoyer le `hashedPassword` de `modules/dev-vm.nix` (hash brute-forçable en public, VM dev only).
+- Fix ref OTA : pousser le code sur la branche par défaut (renommer `mvp-installed`→`main` ou pin `?ref=`) sinon l'OTA no-op.
+- Pas de clé privée dans l'historique (vérifié). Clé SSH *publique* florent@ArchWork = sans danger.
 
 ## CODE TERMINÉ — Tasks 1-9, 11, 12 (commits 91004e2 → 4432689)
 
