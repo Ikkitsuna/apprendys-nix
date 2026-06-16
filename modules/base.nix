@@ -98,23 +98,46 @@ in {
   };
 
   # Prénom → nom complet du compte (GECOS) : le menu Whisker et SDDM affichent
-  # le GECOS s'il existe, sinon « apprendys ». L'installateur écrit le prénom
-  # dans /var/lib/apprendys/user-name ; on l'applique à chaque boot (oneshot,
-  # avant l'écran de connexion). Sans ce fichier (ISO live) : no-op.
+  # le GECOS s'il existe, sinon « apprendys ». Deux sources, par priorité :
+  #   1. ~/.config/apprendys/user-name  ← écrit par « Mon Apprendys » (valeur
+  #      à jour ; n'existe qu'après le 1er login, seedé depuis /var/lib)
+  #   2. /var/lib/apprendys/user-name   ← écrit par l'installateur (1er boot,
+  #      avant tout login)
+  # Lancé au boot (avant l'écran de connexion) ET déclenchable à chaud par
+  # l'app quand on change le prénom (règle polkit ci-dessous). Sans fichier
+  # (ISO live vierge) : no-op.
   systemd.services.apprendys-prenom = {
     description = "Applique le prénom Apprendys au compte (GECOS)";
     wantedBy = [ "multi-user.target" ];
     before = [ "display-manager.service" ];
     serviceConfig.Type = "oneshot";
     script = ''
-      f=/var/lib/apprendys/user-name
-      [ -f "$f" ] || exit 0
-      # GECOS : pas de : ni , (séparateurs passwd), pas de contrôles, 32 max
-      prenom=$(tr -d '\000-\037:,' < "$f" | head -c 32)
-      [ -n "$prenom" ] || exit 0
-      ${pkgs.shadow}/bin/usermod -c "$prenom" apprendys || true
+      for f in /home/apprendys/.config/apprendys/user-name \
+               /var/lib/apprendys/user-name; do
+        [ -f "$f" ] || continue
+        # GECOS : pas de : ni , (séparateurs passwd), pas de contrôles, 32 max
+        prenom=$(tr -d '\000-\037:,' < "$f" | head -c 32)
+        [ -n "$prenom" ] || continue
+        ${pkgs.shadow}/bin/usermod -c "$prenom" apprendys || true
+        exit 0
+      done
     '';
   };
+
+  # « Mon Apprendys » (utilisateur apprendys) peut déclencher CE service
+  # précis sans mot de passe, pour appliquer le prénom à chaud. polkit est
+  # le mécanisme natif NixOS (pas de sudo sur le système installé).
+  security.polkit.enable = true;
+  security.polkit.extraConfig = ''
+    polkit.addRule(function(action, subject) {
+      if (action.id == "org.freedesktop.systemd1.manage-units" &&
+          action.lookup("unit") == "apprendys-prenom.service" &&
+          action.lookup("verb") == "start" &&
+          subject.user == "apprendys") {
+        return polkit.Result.YES;
+      }
+    });
+  '';
 
   # Fonts DYS — priorité absolue
   fonts = {

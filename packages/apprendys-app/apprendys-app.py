@@ -6,13 +6,55 @@ Port V2 (NixOS) de l'app beta V1. Différences clés :
   l'apparence décrit le look, jamais la personne (décision Florent 12/06) ;
 - l'application d'un profil passe par apprendys-session-init (idempotent) :
   icônes + ambiance complète (fond, thème GTK, densité) suivent d'un coup ;
-- bouton MAJ → systemctl start apprendys-ota.service (sudo NOPASSWD dédié) ;
+- prénom (Whisker) → systemctl start apprendys-prenom.service (GECOS),
+  autorisé par règle polkit (base.nix) ;
+- bouton MAJ → systemctl start apprendys-ota.service (règle polkit
+  ota-installed.nix), affiché seulement si le service existe (installé) ;
+- aucune commande qui (re)lance un démon n'est lancée avec capture de tuyau
+  (sinon gel) : voir _spawn/_run ;
 - guides HTML embarqués dans le store (chemin substitué au build).
 Les chemins @...@ sont substitués par packages/apprendys-app.nix.
 """
-import gi, os, subprocess, glob, time, json, hashlib
+import gi, os, subprocess, glob, time, json, hashlib, threading
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GdkPixbuf, Pango
+from gi.repository import Gtk, GdkPixbuf, Pango, GLib
+
+DEVNULL = subprocess.DEVNULL
+
+
+def _spawn(cmd, env):
+    """Lance un processus sans capturer ses tuyaux. CRITIQUE : capturer
+    stdout/stderr (capture_output=True) d'une commande qui (re)lance un
+    démon — xfce4-panel --restart, xfdesktop, xfsettingsd — fait hériter
+    le tuyau au démon, qui ne le ferme jamais → l'appelant gèle. DEVNULL
+    + nouvelle session = aucun héritage, aucun gel."""
+    try:
+        subprocess.Popen(cmd, env=env, stdin=DEVNULL, stdout=DEVNULL,
+                         stderr=DEVNULL, start_new_session=True)
+    except Exception:
+        pass
+
+
+def _run(cmd, env, timeout=30):
+    """run() qui ATTEND la fin mais sans capture de tuyau (même piège que
+    _spawn si la commande backgroundise un démon). DEVNULL partout."""
+    try:
+        return subprocess.run(cmd, env=env, stdin=DEVNULL, stdout=DEVNULL,
+                              stderr=DEVNULL, timeout=timeout).returncode
+    except Exception:
+        return 1
+
+
+def ota_available():
+    """Le service OTA n'existe que sur le système INSTALLÉ (pas l'ISO live :
+    un squashfs en lecture seule ne se met pas à jour). On masque le bouton
+    MAJ si le service est absent → pas de demande de mot de passe inutile."""
+    try:
+        return subprocess.run(['systemctl', 'cat', 'apprendys-ota.service'],
+                              stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL,
+                              timeout=5).returncode == 0
+    except Exception:
+        return False
 
 CONFIG_DIR   = os.path.expanduser('~/.config/apprendys')
 ICON_BASE    = os.path.expanduser('~/.local/share/icons/apprendys')
@@ -116,17 +158,19 @@ def check_pin(pin):
 
 def apply_profile(profile, env):
     """V2 : on écrit icon-set puis session-init applique TOUT (icônes,
-    fond, thème GTK, densité, panel) — source de vérité unique."""
+    fond, thème GTK, densité, panel) — source de vérité unique.
+    session-init relance déjà le panel ; on ne le refait donc PAS ici
+    (c'était la source du gel). DEVNULL obligatoire : session-init
+    backgroundise un xfce4-panel --restart qui hériterait du tuyau."""
     if not os.path.isdir(os.path.join(ICON_BASE, profile)):
         return False
     write_cfg(ICON_CONFIG, profile)
-    subprocess.run(['apprendys-session-init'], env=env,
-                   capture_output=True, timeout=60)
-    # xfdesktop met en cache les icônes du bureau → redémarrage nécessaire
-    subprocess.run(['pkill', 'xfdesktop'], env=env, capture_output=True)
+    _run(['apprendys-session-init'], env, timeout=60)
+    # xfdesktop met en cache les icônes du bureau (même chemin, PNG changé)
+    # → il faut le relancer pour qu'il relise les nouvelles icônes.
+    _run(['pkill', 'xfdesktop'], env, timeout=5)
     time.sleep(1)
-    subprocess.Popen(['xfdesktop'], env=env)
-    subprocess.run(['xfce4-panel', '--restart'], env=env, capture_output=True)
+    _spawn(['xfdesktop'], env)
     return True
 
 
@@ -144,7 +188,7 @@ def apply_reading(style, size, env):
                    env=env, capture_output=True)
     if subprocess.run(['pgrep', 'xfsettingsd'],
                       capture_output=True).returncode != 0:
-        subprocess.Popen(['xfsettingsd', '--daemon'], env=env)
+        _spawn(['xfsettingsd', '--daemon'], env)
     write_cfg(FONT_STYLE, style)
     write_cfg(FONT_SIZE, str(size))
 
@@ -159,7 +203,7 @@ def apply_cursor(size, env):
                    env=env, capture_output=True)
     if subprocess.run(['pgrep', 'xfsettingsd'],
                       capture_output=True).returncode != 0:
-        subprocess.Popen(['xfsettingsd', '--daemon'], env=env)
+        _spawn(['xfsettingsd', '--daemon'], env)
     write_cfg(CURSOR_SIZE, str(size))
 
 
@@ -177,22 +221,15 @@ def load_changelog():
         return []
 
 
-def set_whisker_title(name, env):
-    if name:
-        subprocess.run(['xfconf-query', '-c', 'xfce4-panel',
-                        '-p', '/plugins/plugin-1/button-title',
-                        '--create', '-t', 'string', '-s', name],
-                       env=env, capture_output=True)
-        subprocess.run(['xfconf-query', '-c', 'xfce4-panel',
-                        '-p', '/plugins/plugin-1/show-button-title',
-                        '--create', '-t', 'bool', '-s', 'true'],
-                       env=env, capture_output=True)
-    else:
-        subprocess.run(['xfconf-query', '-c', 'xfce4-panel',
-                        '-p', '/plugins/plugin-1/show-button-title',
-                        '--create', '-t', 'bool', '-s', 'false'],
-                       env=env, capture_output=True)
-    subprocess.run(['xfce4-panel', '--restart'], env=env, capture_output=True)
+def apply_user_name(env):
+    """L'en-tête du menu Whisker affiche le NOM COMPLET du compte (GECOS),
+    pas une propriété xfconf. On déclenche apprendys-prenom.service (oneshot,
+    privilégié via règle polkit dans base.nix) : il relit
+    ~/.config/apprendys/user-name et fait `usermod -c`. Puis on relance le
+    panel pour que Whisker relise le GECOS. Sur un système sans le service
+    ni la règle, le start échoue silencieusement (best-effort)."""
+    _run(['systemctl', 'start', 'apprendys-prenom.service'], env, timeout=15)
+    _spawn(['xfce4-panel', '--restart'], env)
 
 
 class MonApprendys(Gtk.Window):
@@ -354,10 +391,10 @@ class MonApprendys(Gtk.Window):
         box.pack_start(Gtk.Separator(), False, False, 4)
 
         # Bouton Appliquer global
-        apply_all_btn = Gtk.Button(label='✅  Appliquer les changements')
-        apply_all_btn.get_style_context().add_class('primary-btn')
-        apply_all_btn.connect('clicked', self._on_apply_all)
-        box.pack_start(apply_all_btn, False, False, 0)
+        self.apply_btn = Gtk.Button(label='✅  Appliquer les changements')
+        self.apply_btn.get_style_context().add_class('primary-btn')
+        self.apply_btn.connect('clicked', self._on_apply_all)
+        box.pack_start(self.apply_btn, False, False, 0)
 
         # Bas de page
         guide_btn = Gtk.Button(label='📖  Guides et tutoriels')
@@ -494,7 +531,9 @@ class MonApprendys(Gtk.Window):
             cl_box.pack_start(no, False, False, 0)
         content.pack_start(cl_box, False, False, 0)
 
-        # MAJ
+        # MAJ — bouton seulement si le service OTA existe (système installé).
+        # Sur l'ISO live : rien à mettre à jour, et déclencher le service
+        # ferait apparaître une demande de mot de passe (pas de règle polkit).
         content.pack_start(Gtk.Separator(), False, False, 0)
         maj_lbl = Gtk.Label(label='🔄  Mise à jour')
         maj_lbl.get_style_context().add_class('section-lbl')
@@ -503,15 +542,23 @@ class MonApprendys(Gtk.Window):
 
         maj_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         ver = read_cfg(VERSION_FILE, '?')
-        info_lbl = Gtk.Label(label=f'Version {ver}')
-        info_lbl.get_style_context().add_class('sub')
-        info_lbl.set_halign(Gtk.Align.START)
-        maj_row.pack_start(info_lbl, True, True, 0)
+        if ota_available():
+            info_lbl = Gtk.Label(label=f'Version {ver}')
+            info_lbl.get_style_context().add_class('sub')
+            info_lbl.set_halign(Gtk.Align.START)
+            maj_row.pack_start(info_lbl, True, True, 0)
 
-        self.update_btn = Gtk.Button(label='Vérifier maintenant')
-        self.update_btn.get_style_context().add_class('primary-btn')
-        self.update_btn.connect('clicked', self._on_update)
-        maj_row.pack_end(self.update_btn, False, False, 0)
+            self.update_btn = Gtk.Button(label='Vérifier maintenant')
+            self.update_btn.get_style_context().add_class('primary-btn')
+            self.update_btn.connect('clicked', self._on_update)
+            maj_row.pack_end(self.update_btn, False, False, 0)
+        else:
+            info_lbl = Gtk.Label(
+                label='Les mises à jour seront automatiques après installation.')
+            info_lbl.get_style_context().add_class('sub')
+            info_lbl.set_halign(Gtk.Align.START)
+            info_lbl.set_line_wrap(True)
+            maj_row.pack_start(info_lbl, True, True, 0)
         content.pack_start(maj_row, False, False, 0)
 
         # TTS speed
@@ -670,7 +717,10 @@ class MonApprendys(Gtk.Window):
             write_cfg(NAME_CONFIG, name)
             self._refresh_greeting()
             self._refresh_name_btn()
-            set_whisker_title(name, self.env)
+            # GECOS + restart panel hors thread UI (apply_user_name ne capture
+            # aucun tuyau → pas de gel). Dans un thread pour rester fluide.
+            threading.Thread(target=apply_user_name, args=(self.env,),
+                             daemon=True).start()
         dialog.destroy()
 
     def _has_unsaved(self):
@@ -719,21 +769,40 @@ class MonApprendys(Gtk.Window):
             d.run(); d.destroy()
             return
 
+        # On applique DANS UN THREAD : session-init + relance xfdesktop
+        # prennent ~2 s. Bloquer le thread GTK = fenêtre figée (bug 12/06).
+        # Snapshot des sélections (le thread ne touche jamais un widget).
+        prof, fstyle = self.sel_profile, self.sel_font_style
+        fsize, csz   = self.sel_font_size, self.sel_cursor_sz
+        self.apply_btn.set_sensitive(False)
+        self.apply_btn.set_label('Application en cours…')
+
+        def worker():
+            if changed_font or changed_cursor:
+                apply_reading(fstyle, fsize, self.env)
+                apply_cursor(csz, self.env)
+            if changed_icons:
+                apply_profile(prof, self.env)
+            GLib.idle_add(self._apply_done, changed_icons, changed_font,
+                          changed_cursor, prof, fstyle, fsize, csz)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _apply_done(self, changed_icons, changed_font, changed_cursor,
+                    prof, fstyle, fsize, csz):
+        """Repris sur le thread GTK (via idle_add) une fois l'apply fini :
+        on met à jour l'état sauvegardé et on réactive le bouton. Pas de
+        popup ni de fermeture — l'effet est visible à l'écran (retour
+        Florent), l'app reste ouverte pour essayer d'autres styles."""
         if changed_font or changed_cursor:
-            apply_reading(self.sel_font_style, self.sel_font_size, self.env)
-            apply_cursor(self.sel_cursor_sz, self.env)
-            self.saved_font_style = self.sel_font_style
-            self.saved_font_size  = self.sel_font_size
-            self.saved_cursor_sz  = self.sel_cursor_sz
-
+            self.saved_font_style = fstyle
+            self.saved_font_size  = fsize
+            self.saved_cursor_sz  = csz
         if changed_icons:
-            apply_profile(self.sel_profile, self.env)
-            self.saved_profile = self.sel_profile
-
-        # Pas de popup ni de fermeture : l'effet est visible à l'écran
-        # (retour Florent 12/06 — et le dialogue sortait en 10x10 à cause
-        # du restart xfdesktop pendant son mapping). L'app reste ouverte
-        # pour continuer à essayer des styles.
+            self.saved_profile = prof
+        self.apply_btn.set_sensitive(True)
+        self.apply_btn.set_label('✅  Appliquer les changements')
+        return False  # one-shot idle
 
     def _on_close(self, widget, event):
         if not self._has_unsaved():
@@ -752,8 +821,8 @@ class MonApprendys(Gtk.Window):
         response = dialog.run()
         dialog.destroy()
         if response == Gtk.ResponseType.OK:
-            self._on_apply_all(None)
-            return False  # applique puis laisse la fenêtre se fermer
+            self._on_apply_all(None)   # apply asynchrone (~2 s)
+            return True  # garde la fenêtre le temps d'appliquer ; refermer ensuite
         elif response == Gtk.ResponseType.REJECT:
             return False  # quitte sans appliquer
         return True  # annule la fermeture
