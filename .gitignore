@@ -1,0 +1,13 @@
+# ── Zone PRIVÉE (jamais sur le repo public) ─────────────────────────────────
+# Docs stratégiques/business : distribution, prix, hébergement, clés, canaux…
+# Tout ce qui ne doit PAS être public va dans docs/private/.
+docs/private/
+
+# ── Artefacts de build Nix ──────────────────────────────────────────────────
+result
+result-*
+.direnv/
+
+# ── Divers ──────────────────────────────────────────────────────────────────
+*.swp
+.DS_Store
