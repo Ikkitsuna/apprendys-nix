@@ -51,6 +51,13 @@ Flasher : `sudo dd if=result/iso/*.iso of=/dev/sdX bs=4M status=progress oflag=s
 | `packages/` | apprendys-tts, apprendys-stt, session-init, **apprendys-app**, installateur |
 | `home/` | session XFCE (icônes, bureau, raccourcis) |
 
+## Documentation
+
+Doc technique complète dans **[`docs/`](docs/)** (pour reprendre la main à tout moment) :
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — le modèle mental (flake, profils/modules/packages, boot, OTA)
+- [`docs/OPERATIONS.md`](docs/OPERATIONS.md) — le runbook (build, flash, test VM, MAJ OTA, rollback, debug)
+- [`docs/MODULES.md`](docs/MODULES.md) — référence fichier par fichier
+
 ## Licence
 
 Code propriétaire — © CF-Informatik974. Tous droits réservés.
